@@ -1,7 +1,9 @@
-Tervetuloa Vaajalan oppimispeleihin josta voit oppia monia eri asioita!✨🎉
-Voit oppia matematiikkaa, fysikkaa ja kemiaa! Auttaa paljon 7-9 luokkalaisia!
+# Tervetuloa Vaajalan oppimispeleihin! ✨🎉
 
-Voit mm. harjoitella erillaisia asioita matematiikassa:
+Täältä voit oppia monia eri asioita ja harjoitella mm. **matematiikkaa**, **fysiikkaa** ja **kemiaa**! 👩‍🏫  
+Auttaa paljon 7-9 luokkalaisia! 💖
+
+## Matematiikka 📐
 - Yhteen- ja vähennyslasku
 - Yhteen- ja vähennyslasku (Keskitaso)
 - Kertotaulut
@@ -14,23 +16,18 @@ Voit mm. harjoitella erillaisia asioita matematiikassa:
 - Potenssipeli
 - Prosenttilukujen muuntaminen peli
 
-Voit mm. harjoitella myös Fysiikkaa:
+## Fysiikka ⚡
 - Laske nopeus, matka tai aika
-- Laske Jännite, virta tai resistanssi
+- Laske jännite, virta tai resistanssi
 
-Voit mm. harjoitella mmyös Kemiaa:
-- Kemialliset merkit 1
-- Kemialliset merkit 2
+## Kemia ⚗️
+- Kemialliset merkit 1 & 2
 - Jaksollinen järjestelmä
-- Ioniyhdisteen muodostuminen
-- Ioniyhdisteen nimeäminen
+- Ioniyhdisteen muodostuminen & nimeäminen
 - Molekyyliyhdisteiden nimeäminen
-- Tunnista hiilivety
-- Tunnista hiilivety tai alkoholi
-- Tunnista hiilivety tai alkoholi tai karboksyylihappo
+- Tunnista hiilivety / alkoholi / karboksyylihappo
 - Orgaanisen kemian käsitteet
-- Palamisreaktion tasapainotus (Hiilivedyt)
-- Palamisreaktion tasapainotus (Hiilivedyt ja alkoholit)
+- Palamisreaktion tasapainotus (Hiilivedyt & alkoholit)
 
-Sivustossa vaajis100.github.io/oppimispelit löytyy Vaajalan pelit!🎉✨
-Tervetuloa harjoittelemaan Vaajalan Matematiikkaa, Fysiikkaa ja Kemiaa!✨🎉
+🌐 Sivustossa [vaajis100.github.io/oppimispelit](https://vaajis100.github.io/oppimispelit) löytyy Vaajalan pelit!  
+Tervetuloa harjoittelemaan Vaajalan **Matematiikkaa, Fysiikkaa ja Kemiaa**! ✨🎉
