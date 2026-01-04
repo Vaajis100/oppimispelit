@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sähköopin piirtomerkit -peli</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 760px;
+      margin: auto;
+      padding: 20px;
+    }
+    .card {
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    img {
+      max-width: 100%;
+      margin: 12px 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .vaihtoehdot {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    button {
+      padding: 10px 12px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      background: white;
+      text-align: left;
+    }
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.75;
+    }
+    .oikein { border-color: green; }
+    .vaara { border-color: red; }
+    .hidden { display: none; }
+    .ylapalkki {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .palaute {
+      margin-top: 12px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Sähköopin piirtomerkit</h1>
+
+  <div class="card">
+    <div class="ylapalkki">
+      <div id="tilanne"></div>
+      <div id="pisteet"></div>
+    </div>
+
+    <p><strong>Mikä piirtomerkki on kuvassa?</strong></p>
+
+    <img id="kuva" src="" alt="Piirtomerkki">
+
+    <div id="vaihtoehdot" class="vaihtoehdot"></div>
+
+    <p id="palaute" class="palaute"></p>
+
+    <button id="seuraavaBtn" class="hidden">Seuraava</button>
+
+    <div id="loppu" class="hidden">
+      <h2>Peli päättyi!</h2>
+      <p><strong>Lopulliset pisteet:</strong> <span id="lopputulos"></span> / <span id="maxpisteet"></span></p>
+      <button onclick="aloitaAlusta()">Aloita alusta</button>
+    </div>
+  </div>
+
+  <script>
+    // Komponenttien nimet = myös kuvatiedostojen nimet (esim. "Paristo.png")
+    const komponentit = [
+      "Paristo",
+      "Lamppu",
+      "Johdin",
+      "Virtamittari",
+      "Jännitemittari",
+      "Vastus",
+      "Säädettävä jännitelähde",
+      "Katkaisija"
+    ];
+
+    // Valitse kuvapäätteeksi .png (vaihda .jpg jos tarvitset)
+    const KUVA_PAATE = ".png";
+
+    // Pelitila
+    let jarjestys = [];
+    let i = 0;
+    let score = 0;
+    let lukittu = false;
+
+    const elTilanne = document.getElementById("tilanne");
+    const elPisteet = document.getElementById("pisteet");
+    const elKuva = document.getElementById("kuva");
+    const elVaihtoehdot = document.getElementById("vaihtoehdot");
+    const elPalaute = document.getElementById("palaute");
+    const elSeuraava = document.getElementById("seuraavaBtn");
+    const elLoppu = document.getElementById("loppu");
+    const elLopputulos = document.getElementById("lopputulos");
+    const elMaxpisteet = document.getElementById("maxpisteet");
+
+    function sekoita(arr) {
+      for (let j = arr.length - 1; j > 0; j--) {
+        const k = Math.floor(Math.random() * (j + 1));
+        [arr[j], arr[k]] = [arr[k], arr[j]];
+      }
+      return arr;
+    }
+
+    function arvoVaihtoehdot(oikea) {
+      // Valitaan 3 väärää
+      const vaarat = komponentit.filter(x => x !== oikea);
+      sekoita(vaarat);
+      const valitutVaarat = vaarat.slice(0, 3);
+
+      const nelja = [oikea, ...valitutVaarat];
+      return sekoita(nelja);
+    }
+
+    function paivitaYlapalkki() {
+      elTilanne.textContent = `Kysymys ${i + 1} / ${jarjestys.length}`;
+      elPisteet.textContent = `Pisteet: ${score}`;
+    }
+
+    function naytaKysymys() {
+      lukittu = false;
+      elPalaute.textContent = "";
+      elSeuraava.classList.add("hidden");
+      elLoppu.classList.add("hidden");
+
+      const oikea = jarjestys[i];
+
+      paivitaYlapalkki();
+
+      // Kuva: tiedostonimi on komponentin nimi + pääte
+      elKuva.src = oikea + KUVA_PAATE;
+      elKuva.alt = oikea;
+
+      // Vaihtoehdot
+      elVaihtoehdot.innerHTML = "";
+      const vaihtoehdot = arvoVaihtoehdot(oikea);
+
+      vaihtoehdot.forEach(v => {
+        const btn = document.createElement("button");
+        btn.textContent = v;
+        btn.addEventListener("click", () => vastaa(btn, v, oikea));
+        elVaihtoehdot.appendChild(btn);
+      });
+    }
+
+    function vastaa(painettuNappi, valittu, oikea) {
+      if (lukittu) return;
+      lukittu = true;
+
+      const napit = Array.from(elVaihtoehdot.querySelectorAll("button"));
+      napit.forEach(b => b.disabled = true);
+
+      if (valittu === oikea) {
+        score += 1;
+        painettuNappi.classList.add("oikein");
+        elPalaute.textContent = "Oikein!";
+      } else {
+        painettuNappi.classList.add("vaara");
+        elPalaute.textContent = `Väärin. Oikea vastaus: ${oikea}`;
+
+        // Merkitään myös oikea vaihtoehto
+        const oikeaBtn = napit.find(b => b.textContent === oikea);
+        if (oikeaBtn) oikeaBtn.classList.add("oikein");
+      }
+
+      paivitaYlapalkki();
+      elSeuraava.classList.remove("hidden");
+    }
+
+    function seuraava() {
+      i++;
+      if (i >= jarjestys.length) {
+        naytaLoppu();
+      } else {
+        naytaKysymys();
+      }
+    }
+
+    function naytaLoppu() {
+      elVaihtoehdot.innerHTML = "";
+      elKuva.classList.add("hidden");
+      elSeuraava.classList.add("hidden");
+
+      elLoppu.classList.remove("hidden");
+      elLopputulos.textContent = score;
+      elMaxpisteet.textContent = jarjestys.length;
+      elTilanne.textContent = "Valmis!";
+      elPisteet.textContent = `Pisteet: ${score}`;
+    }
+
+    function aloitaAlusta() {
+      // Palautetaan kuva näkyviin
+      elKuva.classList.remove("hidden");
+
+      // Satunnainen kysymysjärjestys
+      jarjestys = sekoita([...komponentit]);
+      i = 0;
+      score = 0;
+      naytaKysymys();
+    }
+
+    elSeuraava.addEventListener("click", seuraava);
+
+    // Käynnistys
+    aloitaAlusta();
+  </script>
+
+</body>
+</html>
