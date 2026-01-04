@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Virtapiiripeli</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 760px;
+      margin: auto;
+      padding: 20px;
+    }
+    img {
+      max-width: 100%;
+      margin: 15px 0;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+    .hidden { display: none; }
+    button {
+      margin-top: 10px;
+      padding: 8px 12px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    textarea {
+      width: 100%;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    .mallivastaus { color: red; }
+    .card {
+      padding: 14px;
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+    }
+    .pisteet {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .palaute {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Virtapiiripeli</h1>
+
+  <div class="card">
+    <div id="kysymysNumero"></div>
+    <p id="kysymysTeksti"><strong></strong></p>
+
+    <img id="kysymysKuva" src="" alt="Kysymyksen kuva" class="hidden">
+    <textarea id="vastaus" rows="4" placeholder="Kirjoita vastauksesi tähän..."></textarea><br>
+
+    <button id="vastaaBtn">Vastaa</button>
+
+    <div id="arviointi" class="hidden">
+      <h3>Mallivastaus</h3>
+      <p id="mallivastausTeksti" class="mallivastaus"></p>
+
+      <h3>Arvioi vastauksesi</h3>
+      <div class="pisteet">
+        <button onclick="annaPisteet(0)">0 pistettä</button>
+        <button onclick="annaPisteet(1)">1 piste</button>
+        <button onclick="annaPisteet(2)">2 pistettä</button>
+      </div>
+
+      <p id="palaute" class="palaute"></p>
+
+      <button id="seuraavaBtn">Seuraava kysymys</button>
+    </div>
+
+    <div id="loppu" class="hidden">
+      <h2>Peli päättyi!</h2>
+      <p><strong>Kokonaispisteet:</strong> <span id="kokonaispisteet"></span></p>
+      <button onclick="aloitaAlusta()">Aloita alusta</button>
+    </div>
+  </div>
+
+  <script>
+    const kysymykset = [
+      {
+        teksti: "Miten kuvan paristot on kytketty?",
+        kuva: "paristot.png",
+        mallivastaus: "Paristot on kytketty sarjaan."
+      },
+      {
+        teksti: "Mitä komponentteja ja kuinka monta kutakin on seuraavassa kytkennässä?",
+        kuva: "paristotlamppu.png",
+        mallivastaus: "Kaksi paristoa ja yksi lamppu."
+      },
+      {
+        teksti: "Mikä on virtapiirin kokonaisjännite, jos yhden pariston jännite on 1,5 V?",
+        kuva: "kysymys3.png",
+        mallivastaus: "1,5 V + 1,5 V = 3,0 V"
+      },
+      {
+        teksti: "Mikä on paristojen kokonaisjännite kuvan sarjaankytkennässä?",
+        kuva: "kysymys4.png",
+        mallivastaus: "1,5 V + 1,5 V + 1,5 V = 4,5 V"
+      },
+      {
+        teksti: "Miten paristot on kytketty kuvassa?",
+        kuva: "kysymys5.png",
+        mallivastaus: "Rinnankytkentään"
+      },
+      {
+        teksti: "Miten paristot on kytketty kuvassa ja mitä hyötyä tästä kytkennästä on?",
+        kuva: "kysymys6.png",
+        mallivastaus: "Rinnankytkentään, jossa virtapiirin jännite ei kasva mutta paristot kestävät pidempään"
+      },
+      {
+        teksti: "Kerro omin sanoin, mitä kuvassa olevassa virtapiirissä on?",
+        kuva: "kysymys7.png",
+        mallivastaus: "Paristoon on kytketty kaksi lamppua rinnan. Lisäksi jännitemittari mittaa pariston jännitettä."
+      },
+      {
+        teksti: "Miten kuvan lamput on kytketty paristoon?",
+        kuva: "kysymys8.png",
+        mallivastaus: "Sarjaan"
+      },
+      {
+        teksti: "Miten kuvan lamput on kytketty paristoon?",
+        kuva: "kysymys9.png",
+        mallivastaus: "Rinnan"
+      }
+    ];
+
+    let indeksi = 0;
+    let pisteetYhteensa = 0;
+
+    const kysymysNumero = document.getElementById("kysymysNumero");
+    const kysymysTeksti = document.getElementById("kysymysTeksti");
+    const kysymysKuva = document.getElementById("kysymysKuva");
+    const vastaus = document.getElementById("vastaus");
+    const vastaaBtn = document.getElementById("vastaaBtn");
+
+    const arviointi = document.getElementById("arviointi");
+    const mallivastausTeksti = document.getElementById("mallivastausTeksti");
+    const palaute = document.getElementById("palaute");
+    const seuraavaBtn = document.getElementById("seuraavaBtn");
+
+    const loppu = document.getElementById("loppu");
+    const kokonaispisteet = document.getElementById("kokonaispisteet");
+
+    function naytaKysymys() {
+      const k = kysymykset[indeksi];
+
+      kysymysNumero.innerHTML = `<h2>Kysymys ${indeksi + 1} / ${kysymykset.length}</h2>`;
+      kysymysTeksti.innerHTML = `<strong>${k.teksti}</strong>`;
+
+      // Kuva
+      if (k.kuva) {
+        kysymysKuva.src = k.kuva;
+        kysymysKuva.classList.remove("hidden");
+      } else {
+        kysymysKuva.classList.add("hidden");
+      }
+
+      vastaus.value = "";
+      arviointi.classList.add("hidden");
+      palaute.textContent = "";
+
+      // Vastaa-nappi päälle
+      vastaaBtn.disabled = false;
+
+      // Loppu piiloon
+      loppu.classList.add("hidden");
+    }
+
+    function naytaMallivastaus() {
+      const k = kysymykset[indeksi];
+      mallivastausTeksti.textContent = k.mallivastaus;
+      arviointi.classList.remove("hidden");
+
+      // Estetään toistuvat painallukset (valinnainen mutta siisti)
+      vastaaBtn.disabled = true;
+    }
+
+    function annaPisteet(p) {
+      pisteetYhteensa += p;
+      palaute.textContent = `Annoit itsellesi ${p} pistettä. Kokonaispisteet nyt: ${pisteetYhteensa}`;
+    }
+
+    function seuraava() {
+      indeksi++;
+      if (indeksi >= kysymykset.length) {
+        naytaLoppu();
+      } else {
+        naytaKysymys();
+      }
+    }
+
+    function naytaLoppu() {
+      arviointi.classList.add("hidden");
+      kysymysKuva.classList.add("hidden");
+      kysymysTeksti.innerHTML = "";
+      kysymysNumero.innerHTML = "";
+
+      loppu.classList.remove("hidden");
+      kokonaispisteet.textContent = pisteetYhteensa;
+    }
+
+    function aloitaAlusta() {
+      indeksi = 0;
+      pisteetYhteensa = 0;
+      naytaKysymys();
+    }
+
+    // Nappikuuntelijat
+    vastaaBtn.addEventListener("click", naytaMallivastaus);
+    seuraavaBtn.addEventListener("click", seuraava);
+
+    // Aloitus
+    naytaKysymys();
+  </script>
+</body>
+</html>
