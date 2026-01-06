@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <title>Liike kuvaajasta – oppimispeli</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      text-align: center;
+    }
+    .game {
+      background: white;
+      padding: 20px;
+      max-width: 600px;
+      margin: 40px auto;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      margin-bottom: 15px;
+    }
+    button {
+      display: block;
+      width: 100%;
+      margin: 6px 0;
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .feedback {
+      font-weight: bold;
+      margin-top: 10px;
+      min-height: 24px;
+    }
+    .score {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<div class="game" id="game">
+  <h2 id="question"></h2>
+  <img id="image" src="" alt="Kuvaaja">
+  <div id="choices"></div>
+  <div class="feedback" id="feedback"></div>
+  <div class="score" id="score"></div>
+</div>
+
+<script>
+const questions = [
+  {
+    img: "kuva1.png",
+    q: "Miten kappale kuvaajan mukaan liikkuu?",
+    options: ["Tasaisella nopeudella", "Kappale on kiihtyvässä liikkeessä", "Kappale on hidastuvassa liikkeessä", " Kappale on paikallaan"],
+    correct: "Tasaisella nopeudella"
+  },
+  {
+    img: "kuva2.png",
+    q: "Miten kappale kuvaajan mukaan liikkuu?",
+    options: ["Tasaisella nopeudella", "Kappale on kiihtyvässä liikkeessä", "Kappale on hidastuvassa liikkeessä", "Kappale on paikallaan"],
+    correct: "Kappale on paikallaan"
+  },
+  {
+    img: "kuva3.png",
+    q: "Miten kappale kuvaajan mukaan liikkuu?",
+    options: ["Tasaisella nopeudella", "Kappale on kiihtyvässä liikkeessä", "Kappale on hidastuvassa liikkeessä", " Kappale on paikallaan"],
+    correct: "Tasaisella nopeudella"
+  },
+  {
+    img: "kuva4.png",
+    q: "Miten kappale kuvaajan mukaan liikkuu?",
+    options: ["Tasaisella nopeudella", "Kappale on tasaisesti kiihtyvässä liikkeessä", "Kappale on hidastuvassa liikkeessä", " Kappale on paikallaan"],
+    correct: "Kappale on tasaisesti kiihtyvässä liikkeessä"
+  },
+  {
+    img: "kuva5.png",
+    q: "Miten kappale kuvaajan mukaan liikkuu?",
+    options: ["Tasaisella nopeudella", "Kappale on kiihtyvässä liikkeessä", "Kappale on hidastuvassa liikkeessä", " Kappale on paikallaan"],
+    correct: "Kappale on kiihtyvässä liikkeessä"
+  },
+  {
+    img: "kuva6.png",
+    q: "Miten kappale kuvaajan mukaan liikkuu?",
+    options: ["Tasaisella nopeudella", "Kappale on kiihtyvässä liikkeessä", "Kappale on hidastuvassa liikkeessä", " Kappale on paikallaan"],
+    correct: "Kappale on hidastuvassa liikkeessä"
+  },
+  {
+    img: "kuva7.png",
+    q: "Kumpi suorista kuvaa suurempaa nopeutta?",
+    options: ["Sininen", "Punainen"],
+    correct: "Sininen"
+  },
+  {
+    img: "kuva8.png",
+    q: "Kumpi suorista kuvaa pienempää kiihtyvyyttä?",
+    options: ["Sininen", "Punainen"],
+    correct: "Punainen"
+  }
+];
+
+let current = 0;
+let score = 0;
+let locked = false; // estää tuplaklikkaukset
+
+function loadQuestion() {
+  locked = false;
+  const q = questions[current];
+
+  document.getElementById("question").textContent = `Kysymys ${current + 1}. ${q.q}`;
+  document.getElementById("image").src = q.img;
+
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("score").textContent = `Pisteet: ${score} / ${questions.length}`;
+
+  const choicesDiv = document.getElementById("choices");
+  choicesDiv.innerHTML = "";
+
+  q.options.forEach(option => {
+    const btn = document.createElement("button");
+    btn.textContent = option;
+    btn.onclick = () => checkAnswer(option);
+    choicesDiv.appendChild(btn);
+  });
+}
+
+function disableButtons() {
+  document.querySelectorAll("#choices button").forEach(b => b.disabled = true);
+}
+
+function checkAnswer(answer) {
+  if (locked) return;
+  locked = true;
+
+  const correct = questions[current].correct;
+  const feedback = document.getElementById("feedback");
+
+  // lukitaan napit heti
+  disableButtons();
+
+  if (answer === correct) {
+    score += 1;
+    feedback.textContent = "✅ Oikein! +1 piste";
+    feedback.style.color = "green";
+  } else {
+    feedback.textContent = "❌ Väärin. Oikea vastaus: " + correct;
+    feedback.style.color = "red";
+  }
+
+  document.getElementById("score").textContent = `Pisteet: ${score} / ${questions.length}`;
+
+  // siirrytään automaattisesti seuraavaan hetken kuluttua
+  setTimeout(() => {
+    current++;
+    if (current < questions.length) {
+      loadQuestion();
+    } else {
+      endGame();
+    }
+  }, 900);
+}
+
+function endGame() {
+  const game = document.getElementById("game");
+  game.innerHTML = `
+    <h2>🎉 Peli päättyi!</h2>
+    <p><strong>Pisteesi:</strong> ${score} / ${questions.length}</p>
+    <button id="restart">Pelaa uudestaan</button>
+  `;
+
+  document.getElementById("restart").onclick = restartGame;
+}
+
+function restartGame() {
+  current = 0;
+  score = 0;
+
+  const game = document.getElementById("game");
+  game.innerHTML = `
+    <h2 id="question"></h2>
+    <img id="image" src="" alt="Kuvaaja">
+    <div id="choices"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="score" id="score"></div>
+  `;
+
+  loadQuestion();
+}
+
+loadQuestion();
+</script>
+
+</body>
+</html>
