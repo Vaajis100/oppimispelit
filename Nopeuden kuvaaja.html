@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Kuvaaja-peli (itsearviointi) – kuva10</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f4f6f8; margin:0; padding:20px; }
+    .wrap { max-width: 980px; margin:0 auto; display:grid; grid-template-columns: 1fr 1fr; gap:16px; align-items:start; }
+    .card { background:#fff; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.08); padding:16px; }
+    .graph img { width:100%; height:auto; display:block; border-radius:8px; }
+    h2, h3 { margin:0 0 10px 0; }
+    .muted { color:#555; margin:6px 0 0 0; font-size:14px; }
+    textarea, input[type="number"] { width:100%; box-sizing:border-box; padding:10px; font-size:16px; margin-top:8px; }
+    textarea { min-height:110px; resize:vertical; }
+    button { width:100%; padding:10px; font-size:16px; margin-top:10px; cursor:pointer; }
+    .model {
+      margin-top:10px; padding:10px; border-radius:8px;
+      background:#fff5f5; border:1px solid #ffd6d6;
+      color:#b00020; display:none; text-align:left; white-space:pre-wrap;
+    }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px; align-items:end; }
+    .row > div { text-align:left; }
+    .scoreline { margin-top:10px; font-weight:bold; }
+    @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- Kuvaaja aina näkyvillä -->
+  <div class="card graph">
+    <h2>Kuvaaja</h2>
+    <img src="kuva10.png" alt="Kuvaaja (kuva10)">
+    <p class="muted">Kuvaaja pysyy näkyvillä koko pelin ajan.</p>
+  </div>
+
+  <!-- Pelipaneeli -->
+  <div class="card" id="panel">
+    <h2 id="title">Kysymys</h2>
+    <h3 id="questionText"></h3>
+
+    <label for="answer"><strong>Kirjoita vastauksesi:</strong></label>
+    <textarea id="answer" placeholder="Kirjoita tähän..."></textarea>
+
+    <button id="submitBtn">Lähetä vastaus</button>
+
+    <div id="modelAnswer" class="model"></div>
+
+    <div id="selfScoreArea" style="display:none;">
+      <div class="row">
+        <div>
+          <label for="selfScore"><strong>Anna itsellesi pisteet (0–<span id="maxPts"></span>):</strong></label>
+          <input id="selfScore" type="number" min="0" step="1" value="0">
+          <div class="muted">Perusta pisteesi mallivastaukseen.</div>
+        </div>
+        <div>
+          <button id="nextBtn">Seuraava kysymys</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="scoreline" id="scoreLine"></div>
+  </div>
+</div>
+
+<script>
+  // ✅ Kuva10: kysymykset 1–10
+  const questions = [
+    {
+      q: "1. Millaista kappaleen liike on aikavälillä 0 - 2s?",
+      model: "Kappale liikkuu tasaisella nopeudella 3 m/s.",
+      maxPoints: 1
+    },
+    {
+      q: "2. Mitä tapahtuu välillä A - B?",
+      model: "Kappale kiihtyy tasaisella kiihtyvyydellä 1 m/s^2, kunnes saavuttaa nopeuden 6 m/s.",
+      maxPoints: 2
+    },
+    {
+      q: "3. Mitä tapahtuu aikavälillä 5 - 7s?",
+      model: "Kappale liikkuu tasaisella nopeudella 6 m/s.",
+      maxPoints: 1
+    },
+    {
+      q: "4. Mitä tapahtuu välillä C - D?",
+      model: "Kappaleen nopeus hidastuu tasaisesti, kunnes pisteessä D kappale pysähtyy.",
+      maxPoints: 2
+    },
+    {
+      q: "5. Millaista kappaleen liike on välillä D - E?",
+      model: "Kappale on paikallaan.",
+      maxPoints: 1
+    },
+    {
+      q: "6. Mitä tapahtuu välillä E - F?",
+      model: "Kappaleen nopeus kiihtyy tasaisesti, kunnes se saavuttaa nopeuden 4 m/s.",
+      maxPoints: 2
+    },
+    {
+      q: "7. Mitä tapahtuu aikavälillä 11 - 12s?",
+      model: "Kappale liikkuu tasaisella nopeudella 4 m/s.",
+      maxPoints: 1
+    },
+    {
+      q: "8. Kuinka pitkän matkan kappale liikkuu välillä B - C?",
+      model: "12 metriä. (Kappale liikkuu 2 sekunnin ajan nopeudella 6 m/s, joten s = v * t = 6 m/s * 2 s = 12 m.)",
+      maxPoints: 2
+    },
+    {
+      q: "9. Millä aikavälillä kappaleen kiihtyvyys on suurin ja kuinka suuri se on?",
+      model: "Aikavälillä 10 - 11s kappaleen kiihtyvyys on suurin ja se on tällöin 4 m/s^2.",
+      maxPoints: 2
+    },
+    {
+      q: "10. Kuinka kauan kappale on paikallaan 12 sekunnin aikana ja missä kohdassa se tapahtuu?",
+      model: "1 sekunnin aikavälillä 9 - 10 sekuntia.",
+      maxPoints: 2
+    }
+  ];
+
+  let current = 0;
+  let total = 0;
+
+  const panel = document.getElementById("panel");
+  const titleEl = document.getElementById("title");
+  const questionTextEl = document.getElementById("questionText");
+  const answerEl = document.getElementById("answer");
+  const submitBtn = document.getElementById("submitBtn");
+  const modelEl = document.getElementById("modelAnswer");
+  const selfScoreArea = document.getElementById("selfScoreArea");
+  const selfScoreEl = document.getElementById("selfScore");
+  const maxPtsEl = document.getElementById("maxPts");
+  const nextBtn = document.getElementById("nextBtn");
+  const scoreLineEl = document.getElementById("scoreLine");
+
+  function maxTotalPoints() {
+    return questions.reduce((sum, q) => sum + q.maxPoints, 0);
+  }
+
+  function loadQ() {
+    const item = questions[current];
+
+    titleEl.textContent = `Kysymys ${current + 1} / ${questions.length}`;
+    questionTextEl.textContent = item.q;
+
+    answerEl.value = "";
+    answerEl.disabled = false;
+
+    modelEl.style.display = "none";
+    modelEl.textContent = "";
+
+    selfScoreArea.style.display = "none";
+    selfScoreEl.value = 0;
+    selfScoreEl.min = 0;
+    selfScoreEl.max = item.maxPoints;
+    maxPtsEl.textContent = item.maxPoints;
+
+    submitBtn.disabled = false;
+
+    scoreLineEl.textContent = `Pisteet: ${total} / ${maxTotalPoints()}`;
+  }
+
+  submitBtn.addEventListener("click", () => {
+    const item = questions[current];
+
+    answerEl.disabled = true;
+    submitBtn.disabled = true;
+
+    modelEl.textContent = "Mallivastaus: " + item.model;
+    modelEl.style.display = "block";
+
+    selfScoreArea.style.display = "block";
+    selfScoreEl.focus();
+  });
+
+  nextBtn.addEventListener("click", () => {
+    const item = questions[current];
+
+    let pts = parseInt(selfScoreEl.value, 10);
+    if (Number.isNaN(pts)) pts = 0;
+    if (pts < 0) pts = 0;
+    if (pts > item.maxPoints) pts = item.maxPoints;
+
+    total += pts;
+
+    current++;
+    if (current < questions.length) {
+      loadQ();
+    } else {
+      endGame();
+    }
+  });
+
+  function endGame() {
+    const maxPts = maxTotalPoints();
+    panel.innerHTML = `
+      <h2>🎉 Peli päättyi!</h2>
+      <p><strong>Pisteesi:</strong> ${total} / ${maxPts}</p>
+      <button id="restartBtn">Pelaa uudestaan</button>
+      <p class="muted">Kuvaaja pysyy näkyvillä. Voit pelata uudelleen milloin vain.</p>
+    `;
+
+    document.getElementById("restartBtn").addEventListener("click", () => {
+      current = 0;
+      total = 0;
+      location.reload();
+    });
+  }
+
+  loadQ();
+</script>
+
+</body>
+</html>
