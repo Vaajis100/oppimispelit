@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <title>Nopeus – oppimispeli</title>
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+    }
+    iframe {
+      width: 100%;
+      max-width: 100%;
+      height: 400px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 80px;
+      font-size: 16px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px;
+      width: 100%;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .model {
+      margin-top: 15px;
+      padding: 10px;
+      background: #fff5f5;
+      border: 1px solid #ffd6d6;
+      color: #b00020;
+      display: none;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Nopeus</h1>
+
+  <!-- ✅ YouTube-video (käyttäjän antama upotus) -->
+  <iframe
+    width="560"
+    height="315"
+    src="https://www.youtube.com/embed/G0vHYHij_oQ?si=KPS0Y194Oj4BZ-lO"
+    title="YouTube video player"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    referrerpolicy="strict-origin-when-cross-origin"
+    allowfullscreen>
+  </iframe>
+
+  <!-- Kysymys -->
+  <h2>Kysymys 1</h2>
+  <p>
+    Mikä on kappaleen nopeus, kun se kulkee 200 km matkan viidessä tunnissa?
+  </p>
+
+  <label for="answer"><strong>Kirjoita vastauksesi:</strong></label>
+  <textarea id="answer" placeholder="Esim. 40 km/h"></textarea>
+
+  <button onclick="showAnswer()">Näytä mallivastaus</button>
+
+  <div id="modelAnswer" class="model">
+    <strong>Mallivastaus:</strong><br>
+    Nopeus lasketaan kaavalla v = s / t.<br>
+    v = 200 km / 5 h = <strong>40 km/h</strong>.
+  </div>
+</div>
+
+<script>
+  function showAnswer() {
+    document.getElementById("modelAnswer").style.display = "block";
+  }
+</script>
+
+</body>
+</html>
+
