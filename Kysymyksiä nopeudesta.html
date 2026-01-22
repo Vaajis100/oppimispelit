@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <title>Nopeus ja kiihtyvyys</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 30px;
+      max-width: 800px;
+      margin: auto;
+    }
+    h2 {
+      text-align: center;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      font-size: 16px;
+      padding: 10px;
+      margin-top: 10px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    .locked-answer, .model-answer {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f4f4f4;
+      border-left: 4px solid #999;
+    }
+    .model-answer {
+      color: red;
+      border-left: 4px solid red;
+    }
+    .score-section {
+      margin-top: 20px;
+    }
+    select {
+      font-size: 16px;
+      padding: 5px;
+      margin-left: 10px;
+    }
+    .hidden {
+      display: none;
+    }
+    .final-score {
+      font-size: 22px;
+      color: green;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Nopeus ja kiihtyvyys</h2>
+
+  <div id="questionArea">
+    <strong>Kysymys:</strong>
+    <p id="questionText"></p>
+
+    <textarea id="userAnswer" placeholder="Kirjoita vastauksesi tähän..."></textarea><br>
+    <button onclick="checkAnswer()">Tarkista</button>
+  </div>
+
+  <div id="resultArea" class="hidden">
+    <div class="locked-answer">
+      <strong>Oma vastauksesi:</strong>
+      <p id="userText"></p>
+    </div>
+
+    <div class="model-answer">
+      <strong>Mallivastaus:</strong>
+      <p id="modelText"></p>
+    </div>
+
+    <div class="score-section">
+      <label for="score">Anna itsellesi pisteet (0–2):</label>
+      <select id="score" onchange="showNextButton()">
+        <option value="">Valitse</option>
+        <option value="0">0</option>
+        <option value="0.5">0.5</option>
+        <option value="1">1</option>
+        <option value="1.5">1.5</option>
+        <option value="2">2</option>
+      </select>
+    </div>
+
+    <button id="nextButton" class="hidden" onclick="nextQuestion()">Seuraava kysymys</button>
+  </div>
+
+  <div id="endScreen" class="hidden">
+    <h3>Harjoitus päättyi!</h3>
+    <p class="final-score" id="finalScore"></p>
+    <button onclick="startGame()">Pelaa uudestaan</button>
+  </div>
+
+  <script>
+    const questions = [
+      {
+        question: "Mitä eroa on tasaisella liikkeellä ja kiihtyvällä liikkeellä?",
+        answer: "Tasainen liike tarkoittaa, että kappaleen nopeus on kokoajan sama. Kiihtyvässä liikkeessä nopeus kasvaa (tai vähenee, mutta yleensä puhekielessä kiihtyvyys tarkoittaa nopeuden kasvua.)"
+      },
+      {
+        question: "Auto kulkee 320 km matkan neljässä tunnissa. Mikä on auton keskinopeus? ",
+        answer: "v = s/t = 320km / 4h = 80 km/h"
+      },
+      {
+        question: "Pyöräilijä ajaa nopeudella 7 m/s kahdeksan minuuttia. Kuinka pitkä matka kuljetaan?",
+        answer: " 8 min = 8 * 60s = 480 s,  s = v * t = 7 m/s * 480s = 3360 m "
+      },
+      {
+        question: "Auto ajaa nopeudella 120 km/h 480 kilometrin matkan. Kuinka kauan aikaa kuluu?",
+        answer: "t = s/v = 480 km / 120 km/h = 4 h"
+      },
+      {
+        question: "Kappaleen kiihtyvyys on 4 m/s^2 ja se lähtee liikkeelle levosta. Mikä on kappaleen nopeus a) 2 sekunnin kuluttua b) 5 sekunnin kuluttua?  ",
+        answer: "a) v = a * t = 4 m/s^2 * 2 s = 8 m/s b) v = a * t = 4 m/s^2 * 5 s = 20 m/s"
+      },
+      {
+        question: "Mikä on kiihtyvyyden tunnus ja yksikkö?",
+        answer: "Kiihtyvyyden tunnus on a ja yksikkö m/s^2"
+      },
+      {
+        question: "Mikä on nopeuden tunnus ja yksikkö?",
+        answer: "Nopeuden tunnus on v ja yksikkö m/s tai km/h."
+      },
+      {
+        question: "Mitä tarkoittaa tasainen kiihtyvyys?",
+        answer: " Tasaisella kiihtyvyydellä tarkoitetaan, että nopeus kasvaa saman verran tietyssä aikayksikössä eli esimerkiksi nopeus kasvaa joka sekunti 2 m/s."
+      },
+      {
+        question: " Minkälainen on tasaisen liikkeen kuvaaja (t,s)-koordinaatistossa?",
+        answer: " Tasaisen liikkeen kuvaaja (t,s)-koordinaatistossa on nouseva suora. Mitä jyrkimmin suora nousee, sen suurempi on kappaleen nopeus."
+      },
+      {
+        question: "Minkälainen on tasaisen liikkeen kuvaaja (t,v)-koordinaatistossa? Miten se eroaa tasaisen kiihtyvyyden kuvaajasta (t,v)-koordinaatistossa?",
+        answer: "Tasaisen liikkeen kuvaaja on (t,v)-koordinaatistossa vaakasuora viiva sen nopeuden kohdalla, jolla kappale liikkuu. Tasaisen kiihtyvyyden kuvaaja puolestaan on nouseva suora (t,v)-koordinaatistossa."
+      }
+    ];
+
+    let currentIndex = 0;
+    let usedIndexes = [];
+    let scoreList = [];
+
+    function getRandomQuestion() {
+      if (usedIndexes.length === questions.length) return null;
+
+      let index;
+      do {
+        index = Math.floor(Math.random() * questions.length);
+      } while (usedIndexes.includes(index));
+
+      usedIndexes.push(index);
+      return questions[index];
+    }
+
+    function startGame() {
+      usedIndexes = [];
+      scoreList = [];
+      document.getElementById("endScreen").classList.add("hidden");
+      document.getElementById("questionArea").style.display = "block";
+      document.getElementById("resultArea").classList.add("hidden");
+      nextQuestion();
+    }
+
+    function nextQuestion() {
+  const q = getRandomQuestion();
+  if (!q) {
+    showFinalScore();
+    return;
+  }
+
+  const questionNumber = scoreList.length + 1;
+  document.getElementById("questionText").textContent = `${questionNumber}) ${q.question}`;
+  document.getElementById("userAnswer").value = "";
+  document.getElementById("userAnswer").disabled = false;
+  document.getElementById("resultArea").classList.add("hidden");
+  document.getElementById("questionArea").style.display = "block";
+  document.getElementById("nextButton").classList.add("hidden");
+  document.getElementById("score").value = "";
+
+  currentIndex = questions.indexOf(q);
+}
+
+
+    function checkAnswer() {
+      const answer = document.getElementById("userAnswer").value.trim();
+      if (answer === "") {
+        alert("Kirjoita ensin vastaus ennen tarkistamista.");
+        return;
+      }
+
+      document.getElementById("userText").innerText = answer;
+      document.getElementById("modelText").innerText = questions[currentIndex].answer;
+
+      document.getElementById("resultArea").classList.remove("hidden");
+      document.getElementById("questionArea").style.display = "none";
+    }
+
+    function showNextButton() {
+      const scoreValue = document.getElementById("score").value;
+      if (scoreValue !== "") {
+        scoreList.push(parseFloat(scoreValue));
+        document.getElementById("nextButton").classList.remove("hidden");
+      }
+    }
+
+    function showFinalScore() {
+      const total = scoreList.reduce((sum, val) => sum + val, 0);
+      document.getElementById("finalScore").textContent = `Sait yhteensä ${total} / 20 pistettä.`;
+      document.getElementById("endScreen").classList.remove("hidden");
+      document.getElementById("resultArea").classList.add("hidden");
+      document.getElementById("questionArea").style.display = "none";
+    }
+
+    window.onload = startGame;
+  </script>
+
+</body>
+</html>
