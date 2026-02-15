@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Geometriavisa</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background: #0b1220; color: #e8eefc; }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 24px; }
+    .card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    header { display:flex; gap: 12px; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+    h1 { font-size: 20px; margin: 0; font-weight: 700; }
+    .meta { display:flex; gap: 14px; align-items:center; flex-wrap: wrap; font-size: 14px; opacity: 0.95; }
+    .pill { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
+    .grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; }
+    @media (max-width: 820px){ .grid { grid-template-columns: 1fr; } }
+    .imgbox {
+      display:flex; align-items:center; justify-content:center;
+      background: rgba(255,255,255,0.04);
+      border: 1px dashed rgba(255,255,255,0.18);
+      border-radius: 14px;
+      min-height: 320px;
+      padding: 12px;
+    }
+    img { max-width: 100%; max-height: 420px; object-fit: contain; }
+    .q { margin: 0 0 10px; font-size: 16px; font-weight: 600; }
+    .choices { display:grid; gap: 10px; }
+    button.choice {
+      width: 100%;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      color: #e8eefc;
+      font-size: 15px;
+      cursor: pointer;
+      text-align: left;
+      transition: transform .05s ease, background .15s ease, border-color .15s ease;
+    }
+    button.choice:hover { background: rgba(255,255,255,0.10); }
+    button.choice:active { transform: translateY(1px); }
+    button.choice[disabled] { cursor: not-allowed; opacity: 0.75; }
+    .status { margin-top: 12px; min-height: 24px; font-size: 14px; }
+    .ok { color: #7CFFB2; }
+    .bad { color: #FF8A8A; }
+    .row { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .smallbtn {
+      padding: 10px 12px; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.08);
+      color: #e8eefc; cursor:pointer;
+    }
+    .smallbtn:hover { background: rgba(255,255,255,0.12); }
+    .hint { font-size: 13px; opacity: 0.8; margin-top: 10px; line-height: 1.35; }
+    code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <header>
+        <h1>Geometriavisa</h1>
+        <div class="meta">
+          <span class="pill">Pisteet: <strong id="score">0</strong></span>
+          <span class="pill">Kysymys: <strong id="qnum">1</strong>/<strong id="qtotal">0</strong></span>
+        </div>
+      </header>
+
+      <div class="grid">
+        <div class="imgbox" aria-label="Kysymyksen kuva-alue">
+          <img id="shapeImg" alt="Geometrinen kuva" />
+        </div>
+
+        <div>
+          <p class="q">Mikä kappale kuvassa on?</p>
+          <div id="choices" class="choices" role="group" aria-label="Vastausvaihtoehdot"></div>
+          <div id="status" class="status" aria-live="polite"></div>
+
+          <div class="row">
+            <button class="smallbtn" id="restartBtn">Aloita alusta</button>
+            <button class="smallbtn" id="resetScoreBtn">Nollaa pisteet</button>
+          </div>
+
+          
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SHAPES = [
+      "Suora",
+      "puolisuora",
+      "Jana",
+      "neliö",
+      "suorakulmio",
+      "suunnikas",
+      "teräväkulma",
+      "tylppäkulma",
+      "suorakulma",
+      "oikokulma",
+      "tasasivuinen kolmio",
+      "tasakylkinen kolmio"
+    ];
+
+    // --- Asetukset ---
+    const AUTO_NEXT_DELAY_MS = 900; // viive palautteen jälkeen ennen seuraavaa kysymystä
+
+    // --- Tilat ---
+    let deck = [];               // sekoitettu pakka (ei toistoa)
+    let deckIndex = 0;           // monesko menossa
+    let currentCorrect = null;
+    let score = 0;
+    let answered = false;
+    let autoTimer = null;
+
+    // --- DOM ---
+    const scoreEl = document.getElementById("score");
+    const qnumEl = document.getElementById("qnum");
+    const qtotalEl = document.getElementById("qtotal");
+    const imgEl = document.getElementById("shapeImg");
+    const choicesEl = document.getElementById("choices");
+    const statusEl = document.getElementById("status");
+    const restartBtn = document.getElementById("restartBtn");
+    const resetScoreBtn = document.getElementById("resetScoreBtn");
+
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function pickNRandomDistinct(source, n, excludeSet = new Set()) {
+      const pool = source.filter(x => !excludeSet.has(x));
+      return shuffle(pool).slice(0, n);
+    }
+
+    function shapeToFile(shapeName) {
+      return encodeURIComponent(shapeName) + ".png";
+    }
+
+    function setStatus(msg, kind = "") {
+      statusEl.className = "status " + kind;
+      statusEl.textContent = msg;
+    }
+
+    function renderChoices(options) {
+      choicesEl.innerHTML = "";
+      options.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "choice";
+        btn.textContent = opt;
+        btn.addEventListener("click", () => onAnswer(opt));
+        choicesEl.appendChild(btn);
+      });
+    }
+
+    function setChoicesDisabled(disabled) {
+      Array.from(choicesEl.querySelectorAll("button.choice"))
+        .forEach(b => b.disabled = disabled);
+    }
+
+    function clearAutoTimer() {
+      if (autoTimer !== null) {
+        clearTimeout(autoTimer);
+        autoTimer = null;
+      }
+    }
+
+    function startGame({ resetScore = true } = {}) {
+      clearAutoTimer();
+      deck = shuffle(SHAPES);
+      deckIndex = 0;
+      currentCorrect = null;
+      answered = false;
+
+      if (resetScore) {
+        score = 0;
+        scoreEl.textContent = "0";
+      }
+      qtotalEl.textContent = String(SHAPES.length);
+      newQuestion();
+    }
+
+    function endGame() {
+      answered = true;
+      setChoicesDisabled(true);
+      imgEl.removeAttribute("src");
+      imgEl.alt = "Peli päättyi";
+      setStatus(`Valmis! Sait ${score}/${SHAPES.length} pistettä. Paina "Aloita alusta" pelataksesi uudelleen.`, "ok");
+    }
+
+    function newQuestion() {
+      clearAutoTimer();
+      answered = false;
+      setStatus("");
+
+      if (deckIndex >= deck.length) {
+        endGame();
+        return;
+      }
+
+      currentCorrect = deck[deckIndex];
+      const wrongs = pickNRandomDistinct(SHAPES, 3, new Set([currentCorrect]));
+      const options = shuffle([currentCorrect, ...wrongs]);
+
+      qnumEl.textContent = String(deckIndex + 1);
+
+      const file = shapeToFile(currentCorrect);
+      imgEl.src = file;
+      imgEl.alt = `Kuva: ${currentCorrect}`;
+
+      imgEl.onerror = () => {
+        // Jos kuva puuttuu, näytetään virhe ja siirrytään seuraavaan automaattisesti
+        setStatus(`Kuvaa ei löydy: "${currentCorrect}.png". Tarkista tiedostonimi ja sijainti. Siirrytään seuraavaan...`, "bad");
+        setChoicesDisabled(true);
+        answered = true;
+        autoTimer = setTimeout(() => {
+          deckIndex += 1;
+          newQuestion();
+        }, AUTO_NEXT_DELAY_MS);
+      };
+
+      renderChoices(options);
+      setChoicesDisabled(false);
+    }
+
+    function onAnswer(choice) {
+      if (answered) return;
+      answered = true;
+      setChoicesDisabled(true);
+
+      const correct = (choice === currentCorrect);
+      if (correct) {
+        score += 1;
+        scoreEl.textContent = String(score);
+        setStatus("Oikein! +1 piste.", "ok");
+      } else {
+        setStatus(`Väärin. Oikea vastaus oli: ${currentCorrect}`, "bad");
+      }
+
+      // Siirry automaattisesti seuraavaan
+      autoTimer = setTimeout(() => {
+        deckIndex += 1;
+        newQuestion();
+      }, AUTO_NEXT_DELAY_MS);
+    }
+
+    // Näppäimistö: 1–4 valitsee vaihtoehdon
+    document.addEventListener("keydown", (e) => {
+      const k = e.key;
+      if (k >= "1" && k <= "4") {
+        const idx = Number(k) - 1;
+        const btns = Array.from(choicesEl.querySelectorAll("button.choice"));
+        if (btns[idx] && !btns[idx].disabled) btns[idx].click();
+      }
+    });
+
+    restartBtn.addEventListener("click", () => startGame({ resetScore: true }));
+    resetScoreBtn.addEventListener("click", () => {
+      score = 0;
+      scoreEl.textContent = "0";
+      setStatus("Pisteet nollattu.", "ok");
+    });
+
+    // Aloitus
+    startGame({ resetScore: true });
+  </script>
+</body>
+</html>

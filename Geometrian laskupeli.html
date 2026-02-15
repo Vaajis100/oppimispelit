@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Geometriapeli – Monivalinta</title>
+  <style>
+    :root { --bg:#0b1020; --card:#111a33; --text:#e9eeff; --muted:#b8c2ff; --accent:#7aa2ff; --good:#41d17b; --bad:#ff5d6c; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: radial-gradient(1200px 700px at 10% 10%, #17224a, var(--bg)); color: var(--text); }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 20px; }
+    header { display:flex; gap:12px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; }
+    h1 { margin:0; font-size: 22px; letter-spacing:.2px; }
+    .meta { color: var(--muted); font-size: 14px; }
+    .card { margin-top:14px; background: rgba(17,26,51,.92); border: 1px solid rgba(255,255,255,.08); border-radius: 18px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+    .grid { display:grid; grid-template-columns: 1.25fr .75fr; gap: 16px; }
+    @media (max-width: 860px){ .grid{ grid-template-columns: 1fr; } }
+    .qtitle { font-size: 18px; margin: 0 0 10px 0; }
+    .qsub { margin: 0 0 12px 0; color: var(--muted); font-size: 14px; }
+    .imgbox { background: rgba(0,0,0,.18); border-radius: 16px; border: 1px dashed rgba(255,255,255,.18); padding: 12px; }
+    img { width: 100%; max-width: 420px; height: auto; display:block; margin: 0 auto; border-radius: 12px; }
+    .noimg { padding: 22px; color: var(--muted); text-align:center; border-radius: 12px; background: rgba(0,0,0,.16); }
+    .choices { display:flex; flex-direction:column; gap:10px; }
+    button.choice {
+      width:100%; text-align:left; padding: 12px 12px; border-radius: 14px; cursor:pointer;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); color: var(--text);
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      font-size: 16px;
+    }
+    button.choice:hover { transform: translateY(-1px); background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.18); }
+    button.choice:disabled { cursor: not-allowed; opacity:.85; transform:none; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-top:12px; }
+    .pill { font-size: 13px; color: var(--muted); padding: 6px 10px; border:1px solid rgba(255,255,255,.14); border-radius: 999px; background: rgba(0,0,0,.12); }
+    .btn {
+      padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,.14);
+      background: rgba(122,162,255,.16); color: var(--text); cursor:pointer;
+      transition: background .15s ease, transform .06s ease;
+    }
+    .btn:hover { transform: translateY(-1px); background: rgba(122,162,255,.22); }
+    .btn:disabled { opacity:.65; cursor:not-allowed; transform:none; }
+    .feedback { margin-top: 10px; font-size: 14px; }
+    .feedback.good { color: var(--good); }
+    .feedback.bad  { color: var(--bad); }
+    details { margin-top: 14px; }
+    summary { cursor:pointer; color: var(--muted); }
+    table { width:100%; border-collapse: collapse; margin-top:10px; font-size: 14px; }
+    th, td { text-align:left; padding: 8px; border-bottom: 1px solid rgba(255,255,255,.10); vertical-align: top; }
+    .tag { display:inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); color: var(--muted); font-size: 12px; }
+    .k { color: var(--text); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Geometriapeli (monivalinta)</h1>
+      <div class="meta">Valitse oikea vastaus. Saat pisteen jokaisesta oikein.</div>
+    </div>
+    <div class="meta" id="statusLine"></div>
+  </header>
+
+  <div class="card grid">
+    <div>
+      <p class="qtitle" id="qTitle"></p>
+      <p class="qsub" id="qSub"></p>
+
+      <div class="imgbox" id="imgBox">
+        <img id="qImg" alt="Kysymyksen kuva" />
+        <div class="noimg" id="noImg" style="display:none;">Tässä kysymyksessä ei ole kuvaa.</div>
+      </div>
+
+      <div class="row">
+        <span class="pill" id="progressPill"></span>
+        <span class="pill" id="scorePill"></span>
+      </div>
+
+      <div class="feedback" id="feedback"></div>
+
+      <div class="row">
+        <button class="btn" id="prevBtn">← Edellinen</button>
+        <button class="btn" id="nextBtn">Seuraava →</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="choices" id="choices"></div>
+
+      <details>
+        <summary>Katso tulokset / virheet</summary>
+        <div id="resultsBox"></div>
+      </details>
+
+      <div class="row" style="margin-top:14px;">
+        <button class="btn" id="restartBtn">Aloita alusta</button>
+        <button class="btn" id="shuffleBtn">Sekoita kysymykset</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const IMAGE_FOLDER = "";
+  const IMAGE_EXT    = ".png";
+
+  const QUESTIONS = [
+    { id:1,  file:"kolmio", prompt:"1) Määritä tuntemattoman kulman γ suuruus.", answer:"57°", topic:"angles" },
+    { id:2,  file:"Kulma1", prompt:"2) Määritä tuntemattoman kulman β suuruus.", answer:"57°", topic:"angles" },
+    { id:3,  file:"Kulma3", prompt:"3) Määritä tuntemattoman kulman γ suuruus.", answer:"114°", topic:"angles" },
+    { id:4,  file:"Kulma4", prompt:"4) Määritä tuntemattoman kulman β suuruus.", answer:"292°", topic:"angles_reflex" },
+    { id:5,  file:"Kulma5", prompt:"5) Määritä kulmien β ja γ suuruudet.", answer:"β = 45° ja γ = 270°", topic:"double_angles" },
+    { id:6,  file:"ristikulmat", prompt:"6) Määritä tuntemattoman kulman β suuruus.", answer:"44°", topic:"vertical_angles" },
+    { id:7,  file:"vieruskulmat", prompt:"7) Määritä tuntemattoman kulman β suuruus.", answer:"54°", topic:"linear_pair" },
+    { id:8,  file:"yhdensuunt", prompt:"8) Määritä tuntemattoman kulman β suuruus. Suorille f ja g pätee f || g.", answer:"14°", topic:"parallel_lines" },
+
+    { id:9,  file:"Monikulmion piiri", prompt:"9) Määritä monikulmion piiri.", answer:"22 cm", topic:"perimeter" },
+    { id:10, file:"Suorakulmio1", prompt:"10) Määritä suorakulmion pinta-ala.", answer:"15 cm²", topic:"area" },
+    { id:11, file:"Suorakulmio1", prompt:"11) Määritä suorakulmion piiri.", answer:"16 cm", topic:"perimeter" },
+
+    { id:12, file:"suorakulmainen kolmio1", prompt:"12) Määritä suorakulmaisen kolmion pinta-ala.", answer:"6 cm²", topic:"area" },
+    { id:13, file:"suorakulmainen kolmio1", prompt:"13) Määritä suorakulmaisen kolmion piiri.", answer:"12,0 cm", topic:"perimeter" },
+
+    { id:14, file:null, prompt:"14) Jos tasakylkisen kolmion kantakulman suuruus on 50°, niin mikä on huippukulman suuruus?", answer:"80°", topic:"angles_triangle" },
+    { id:15, file:null, prompt:"15) Mikä on tasasivuisen kolmion piiri, jos sen sivun pituus on 8,0 cm.", answer:"24,0 cm", topic:"perimeter" },
+
+    { id:16, file:"Puolisuunnikas", prompt:"16) Laske puolisuunnikkaan piiri.", answer:"20,2 cm", topic:"perimeter" },
+    { id:17, file:"Puolisuunnikas", prompt:"17) Laske puolisuunnikkaan pinta-ala.", answer:"25 cm²", topic:"area" },
+  ];
+
+  let order = QUESTIONS.map((_, i) => i);
+  let idx = 0;
+  const userAnswers = {};
+
+  const $ = (id) => document.getElementById(id);
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function isAngleAnswer(ans) { return /°/.test(ans); }
+  function isAreaAnswer(ans) { return /cm²/.test(ans) || /cm\^2/i.test(ans); }
+  function isLengthAnswer(ans) { return /cm\b/.test(ans) && !isAreaAnswer(ans); }
+
+  function extractNumberFlexible(s) {
+    const m = String(s).replace(",", ".").match(/-?\d+(\.\d+)?/);
+    return m ? Number(m[0]) : null;
+  }
+
+  function formatLikeAnswer(val, answerStr, unit) {
+    // säilytä yhden desimaalin muoto, jos vastauksessa on pilkku
+    if (String(answerStr).includes(",")) return val.toFixed(1).replace(".", ",") + (unit ? ` ${unit}` : "");
+    // muuten kokonaisluvut kokonaislukuina
+    if (Number.isInteger(extractNumberFlexible(answerStr))) return String(Math.round(val)) + (unit ? ` ${unit}` : "");
+    return String(val) + (unit ? ` ${unit}` : "");
+  }
+
+  function clampAngle(a) {
+    let x = a % 360;
+    if (x < 0) x += 360;
+    return x;
+  }
+
+  function smartAngleDistractors(correctDeg, topic) {
+    // Tyypilliset “ansat” kulmissa eri aiheissa:
+    const c = correctDeg;
+    const base = new Set([
+      c + 5, c - 5, c + 10, c - 10, c + 15, c - 15,
+      180 - c, 180 + c,
+      360 - c,
+      c + 90, c - 90,
+      (c + 180)
+    ]);
+
+    // Aiheriippuvia lisäansoja
+    if (topic === "vertical_angles") {
+      // ristikulmat: sekoitetaan usein vieruskulmaan (180-c)
+      base.add(180 - c);
+      base.add(c + 180);
+    }
+    if (topic === "linear_pair") {
+      // vieruskulmat: usein valitaan ristikulma (=c) tai 360-c
+      base.add(360 - c);
+    }
+    if (topic === "parallel_lines") {
+      // yhdensuuntaiset: usein sekoitetaan vastaava/kongruentti (c) vs. supplementary (180-c)
+      base.add(180 - c);
+      base.add(c + 180);
+    }
+    if (topic === "angles_triangle") {
+      // kolmion kulmat: sekoitetaan 180-2*base tai 180-base jne.
+      base.add(180 - c);
+      base.add(Math.abs(180 - 2*c));
+    }
+    if (topic === "angles_reflex") {
+      // refleksikulma: usein sekoitetaan sisäkulmaan 360-c tai 180-c
+      base.add(360 - c);
+      base.add(180 - (360 - c));
+    }
+
+    // siivoa + muotoile
+    const arr = [...base]
+      .map(clampAngle)
+      .filter(x => x !== c)
+      .filter(x => x !== 0)
+      .filter(x => x <= 359);
+
+    // priorisoi “läheiset” ja klassikot
+    arr.sort((a,b)=> Math.abs(a-c)-Math.abs(b-c));
+    return arr.map(x => `${x}°`);
+  }
+
+  function unitOfAnswer(answer) {
+    if (isAreaAnswer(answer)) return "cm²";
+    if (isLengthAnswer(answer)) return "cm";
+    return "";
+  }
+
+  function smartMetricDistractors(correct, topic) {
+    const n = extractNumberFlexible(correct);
+    const unit = unitOfAnswer(correct);
+    if (n === null) return [];
+
+    // Tyypilliset virheet mittatehtävissä:
+    // - +/− pieni muutos
+    // - sekoitus: piiri vs pinta-ala (jos mahdollista), “unohtui jakaa kahdella”, “unohtui kertoa kahdella”
+    const candidates = new Set();
+
+    // lähellä olevat
+    [ -0.5, 0.5, -1, 1, -2, 2, -3, 3 ].forEach(d => candidates.add(n + d));
+
+    // suhteelliset virheet
+    candidates.add(n * 2);
+    candidates.add(n / 2);
+    candidates.add(n * 1.1);
+    candidates.add(n * 0.9);
+
+    // jos ala: tyypillinen virhe "unohtui jakaa kahdella" (esim. kolmio) tai "käytettiin väärää korkeutta"
+    if (topic === "area") {
+      candidates.add(n * 0.5);
+      candidates.add(n * 2);
+      candidates.add(n + 5);
+      candidates.add(Math.max(0, n - 5));
+    }
+
+    // jos piiri: tyypillinen virhe "unohtui yksi sivu" => n - (1..4)
+    if (topic === "perimeter") {
+      [1,2,3,4].forEach(k => candidates.add(n - k));
+    }
+
+    const cleaned = [...candidates]
+      .filter(x => Number.isFinite(x))
+      .filter(x => x > 0)
+      .filter(x => Math.abs(x - n) > 1e-9);
+
+    // priorisoi järkevät (ei älyttömän isoja)
+    cleaned.sort((a,b)=> Math.abs(a-n)-Math.abs(b-n));
+
+    return cleaned.map(x => formatLikeAnswer(x, correct, unit));
+  }
+
+  function generateOptions(q) {
+    if (userAnswers[q.id]?.options) return userAnswers[q.id].options.slice();
+
+    const correct = q.answer;
+    const opts = new Set([correct]);
+
+    // Kaksi tuntematonta (β ja γ)
+    if (q.topic === "double_angles") {
+      const distractors = [
+        "β = 45° ja γ = 90°",   // γ sekoitettu suoraksi
+        "β = 135° ja γ = 270°", // β sekoitettu vieruskulmaan
+        "β = 45° ja γ = 180°",  // γ sekoitettu oikokulmaan
+        "β = 90° ja γ = 270°",  // β sekoitettu suoraksi
+        "β = 225° ja γ = 270°"  // β refleksiksi
+      ];
+      while (opts.size < 4) opts.add(distractors[Math.floor(Math.random()*distractors.length)]);
+      return shuffle([...opts]).slice(0,4);
+    }
+
+    // Kulmat
+    if (isAngleAnswer(correct)) {
+      const c = extractNumberFlexible(correct);
+      const pool = smartAngleDistractors(c, q.topic);
+      let i = 0;
+      while (opts.size < 4 && i < pool.length) {
+        opts.add(pool[i++]);
+      }
+      // varmistus jos pool ei riittänyt
+      while (opts.size < 4) opts.add(`${clampAngle(c + (opts.size*7))}°`);
+      return shuffle([...opts]).slice(0,4);
+    }
+
+    // Mittayksiköt (cm / cm²)
+    const pool = smartMetricDistractors(correct, q.topic);
+    let i = 0;
+    while (opts.size < 4 && i < pool.length) opts.add(pool[i++]);
+
+    // varmistus
+    while (opts.size < 4) opts.add(`${opts.size} ${unitOfAnswer(correct)}`.trim());
+
+    return shuffle([...opts]).slice(0,4);
+  }
+
+  function scoreNow() {
+    let s = 0;
+    for (const q of QUESTIONS) if (userAnswers[q.id]?.correct) s++;
+    return s;
+  }
+
+  function renderResults() {
+    const rows = QUESTIONS.map((q) => {
+      const ua = userAnswers[q.id];
+      const sel = ua?.selected ?? "—";
+      const ok = ua?.selected === null ? "—" : (ua.correct ? "Oikein" : "Väärin");
+      return `
+        <tr>
+          <td>${q.id}</td>
+          <td>${escapeHtml(q.prompt)}</td>
+          <td>${escapeHtml(sel)}</td>
+          <td>${escapeHtml(q.answer)}</td>
+          <td>${ok}</td>
+        </tr>
+      `;
+    }).join("");
+
+    $("resultsBox").innerHTML = `
+      <div class="meta">Pisteet nyt: <b>${scoreNow()}</b> / ${QUESTIONS.length}</div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Kysymys</th><th>Valintasi</th><th>Oikea</th><th>Tulos</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function render() {
+    const q = QUESTIONS[order[idx]];
+    $("qTitle").textContent = q.prompt;
+    $("qSub").textContent = q.file ? `Kuvatiedosto: ${q.file}` : `Ei kuvaa tässä kysymyksessä.`;
+
+    $("progressPill").textContent = `Kysymys ${idx + 1} / ${QUESTIONS.length}`;
+    $("scorePill").textContent = `Pisteet: ${scoreNow()} / ${QUESTIONS.length}`;
+    $("statusLine").textContent = `Vastattu: ${Object.keys(userAnswers).length} / ${QUESTIONS.length}`;
+
+    if (q.file) {
+      $("noImg").style.display = "none";
+      $("qImg").style.display = "block";
+      const src = IMAGE_FOLDER + encodeURIComponent(q.file) + IMAGE_EXT;
+      $("qImg").src = src;
+      $("qImg").onerror = () => {
+        $("qImg").style.display = "none";
+        $("noImg").style.display = "block";
+        $("noImg").textContent = `Kuvaa ei löytynyt: ${src}`;
+      };
+    } else {
+      $("qImg").style.display = "none";
+      $("noImg").style.display = "block";
+      $("noImg").textContent = "Tässä kysymyksessä ei ole kuvaa.";
+    }
+
+    const options = generateOptions(q);
+    if (!userAnswers[q.id]) userAnswers[q.id] = { selected: null, correct: false, options };
+
+    $("choices").innerHTML = "";
+    options.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.className = "choice";
+      btn.textContent = opt;
+
+      const already = userAnswers[q.id].selected;
+      const locked = already !== null;
+
+      if (locked) {
+        btn.disabled = true;
+        const correct = q.answer;
+        if (opt === correct) btn.style.borderColor = "rgba(65,209,123,.8)";
+        if (opt === already && opt !== correct) btn.style.borderColor = "rgba(255,93,108,.9)";
+      }
+
+      btn.addEventListener("click", () => choose(opt));
+      $("choices").appendChild(btn);
+    });
+
+    const ua = userAnswers[q.id];
+    $("feedback").textContent = "";
+    $("feedback").className = "feedback";
+    if (ua?.selected !== null) {
+      if (ua.correct) {
+        $("feedback").textContent = "✅ Oikein!";
+        $("feedback").classList.add("good");
+      } else {
+        $("feedback").textContent = `❌ Väärin. Oikea vastaus on: ${q.answer}`;
+        $("feedback").classList.add("bad");
+      }
+    }
+
+    $("prevBtn").disabled = idx === 0;
+    $("nextBtn").disabled = idx === QUESTIONS.length - 1;
+
+    renderResults();
+  }
+
+  function choose(opt) {
+    const q = QUESTIONS[order[idx]];
+    const correct = (opt === q.answer);
+    userAnswers[q.id] = { ...userAnswers[q.id], selected: opt, correct };
+    render();
+  }
+
+  $("prevBtn").addEventListener("click", () => { idx = Math.max(0, idx - 1); render(); });
+  $("nextBtn").addEventListener("click", () => { idx = Math.min(QUESTIONS.length - 1, idx + 1); render(); });
+
+  $("restartBtn").addEventListener("click", () => {
+    for (const k of Object.keys(userAnswers)) delete userAnswers[k];
+    idx = 0;
+    render();
+  });
+
+  $("shuffleBtn").addEventListener("click", () => {
+    const currentQId = QUESTIONS[order[idx]].id;
+    order = shuffle(order);
+    idx = order.findIndex(i => QUESTIONS[i].id === currentQId);
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
