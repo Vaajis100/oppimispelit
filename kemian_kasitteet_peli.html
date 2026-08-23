@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kemian käsitteet – tietovisa</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: Arial, Helvetica, sans-serif;
+    background: linear-gradient(135deg, #eef5ff, #f7f2ff);
+    color: #172033; padding: 24px;
+  }
+  .game {
+    width: min(760px, 100%); background: white; border-radius: 24px;
+    box-shadow: 0 18px 50px rgba(30,50,90,.15); padding: 32px;
+  }
+  h1 { margin: 0 0 8px; font-size: clamp(28px, 5vw, 42px); }
+  .subtitle { color: #63708a; margin-bottom: 24px; }
+  .top { display:flex; justify-content:space-between; gap:16px; margin-bottom:12px; font-weight:700; }
+  .progress { height: 12px; background:#e9edf5; border-radius:99px; overflow:hidden; margin-bottom:28px; }
+  .bar { height:100%; width:0; background:linear-gradient(90deg,#4b7bec,#8854d0); transition:.3s; }
+  .question { font-size: clamp(22px, 4vw, 30px); font-weight:800; line-height:1.3; margin-bottom:24px; }
+  .answers { display:grid; gap:13px; }
+  button.answer {
+    width:100%; text-align:left; border:2px solid #dce3ef; background:#f9fbff;
+    border-radius:15px; padding:17px 18px; font-size:18px; cursor:pointer;
+    transition:.15s; color:#172033;
+  }
+  button.answer:hover:not(:disabled) { transform:translateY(-1px); border-color:#7798ed; background:#f2f6ff; }
+  button.answer.correct { background:#e6f8ed; border-color:#35a862; }
+  button.answer.wrong { background:#ffe9e9; border-color:#df5353; }
+  button:disabled { cursor:default; }
+  .feedback { min-height:32px; margin-top:18px; font-size:18px; font-weight:700; }
+  .next, .restart {
+    border:0; background:#4b7bec; color:white; padding:14px 22px; border-radius:12px;
+    font-size:17px; font-weight:700; cursor:pointer; margin-top:8px;
+  }
+  .next { display:none; }
+  .result { text-align:center; display:none; padding:20px 0 6px; }
+  .result .big { font-size:64px; font-weight:900; margin:16px 0; }
+  @media (max-width:560px) { .game { padding:22px; } button.answer { font-size:16px; } }
+</style>
+</head>
+<body>
+<div class="game">
+  <div id="quiz">
+    <h1>⚗️ Kemian käsitteet</h1>
+    <div class="subtitle">Valitse jokaiseen kysymykseen oikea vastaus.</div>
+    <div class="top">
+      <span id="counter">Kysymys 1 / 15</span>
+      <span id="score">Pisteet: 0</span>
+    </div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="question" id="question"></div>
+    <div class="answers" id="answers"></div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next" id="next">Seuraava kysymys →</button>
+  </div>
+  <div class="result" id="result">
+    <h1>🎉 Peli päättyi!</h1>
+    <div class="big" id="finalScore"></div>
+    <p id="resultText"></p>
+    <button class="restart" onclick="location.reload()">Pelaa uudestaan</button>
+  </div>
+</div>
+
+<script>
+const questions = [
+ {q:"Elektronin sähkövaraus on", correct:"Negatiivinen", wrong:["Positiivinen","Neutraali","Vaihtelee atomista riippuen"]},
+ {q:"Protonin sähkövaraus on", correct:"Positiivinen", wrong:["Negatiivinen","Neutraali","Sähkövaraukseton vain ytimessä"]},
+ {q:"Atomin ytimessä on", correct:"Protoneita ja neutroneita", wrong:["Elektroneita ja protoneita","Vain elektroneita","Elektroneita ja neutroneita"]},
+ {q:"Saman alkuaineen atomeissa", correct:"Protonien määrä on aina sama", wrong:["Neutronien määrä on aina sama","Massaluku on aina sama","Elektronikuorten määrä on aina sama"]},
+ {q:"Isotooppi on", correct:"Saman alkuaineen erimassainen atomi", wrong:["Eri alkuaineen samanmassainen atomi","Positiivisesti varautunut atomi","Atomi, jolla ei ole neutroneita"]},
+ {q:"Järjestysluku kertoo", correct:"Alkuaineen ytimessä olevien protonien lukumäärän", wrong:["Neutronien lukumäärän","Elektronikuorten lukumäärän","Protonien ja neutronien yhteismäärän"]},
+ {q:"Sisimmälle elektronikuorelle mahtuu", correct:"Kaksi elektronia", wrong:["Yksi elektroni","Kahdeksan elektronia","Kymmenen elektronia"]},
+ {q:"Jaksollisessa järjestelmässä on eniten", correct:"Metalleja", wrong:["Epämetalleja","Puolimetalleja","Jalokaasuja"]},
+ {q:"Jaksolliseen järjestelmään on", correct:"Taulukoitu olemassa olevat alkuaineet", wrong:["Taulukoitu kaikki tunnetut yhdisteet","Taulukoitu vain metallit","Taulukoitu vain luonnossa esiintyvät aineet"]},
+ {q:"Pääryhmän viimeinen numero kertoo", correct:"Alkuaineen ulkoelektronien lukumäärän", wrong:["Alkuaineen protonien lukumäärän","Alkuaineen elektronikuorten lukumäärän","Alkuaineen neutronien lukumäärän"]},
+ {q:"Jakso kertoo", correct:"Alkuaineen elektronikuorten lukumäärän", wrong:["Alkuaineen ulkoelektronien lukumäärän","Alkuaineen protonien ja neutronien yhteismäärän","Alkuaineen massaluvun"]},
+ {q:"Ryhmän 18 alkuaineet tunnetaan nimellä", correct:"Jalokaasut", wrong:["Halogeenit","Alkalimetallit","Puolimetallit"]},
+ {q:"Oktetti tarkoittaa", correct:"Kahdeksan ulkoelektronin rakennetta", wrong:["Kahdeksaa elektronikuorta","Kahdeksaa protonia ytimessä","Kahdeksaa neutronia ytimessä"]},
+ {q:"Epämetallit sijoittuvat jaksollisessa järjestelmässä pääasiassa", correct:"Oikeaan reunaan", wrong:["Vasempaan reunaan","Keskelle","Alimpaan riviin"]},
+ {q:"Jaksollisessa järjestelmässä on vähiten", correct:"Puolimetalleja", wrong:["Metalleja","Epämetalleja","Alkuaineita, joilla on elektroneja"]}
+];
+
+let index = 0, score = 0, answered = false;
+
+function shuffled(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+function showQuestion() {
+  answered = false;
+  const item = questions[index];
+  document.getElementById("counter").textContent = `Kysymys ${index+1} / ${questions.length}`;
+  document.getElementById("score").textContent = `Pisteet: ${score}`;
+  document.getElementById("bar").style.width = `${(index/questions.length)*100}%`;
+  document.getElementById("question").textContent = item.q;
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("next").style.display = "none";
+  const box = document.getElementById("answers");
+  box.innerHTML = "";
+  shuffled([item.correct, ...item.wrong]).forEach(text => {
+    const b = document.createElement("button");
+    b.className = "answer";
+    b.textContent = text;
+    b.onclick = () => choose(b, text);
+    box.appendChild(b);
+  });
+}
+function choose(button, answer) {
+  if (answered) return;
+  answered = true;
+  const item = questions[index];
+  const buttons = [...document.querySelectorAll(".answer")];
+  buttons.forEach(b => {
+    b.disabled = true;
+    if (b.textContent === item.correct) b.classList.add("correct");
+  });
+  if (answer === item.correct) {
+    score++;
+    document.getElementById("feedback").textContent = "✓ Oikein! Saat yhden pisteen.";
+    document.getElementById("feedback").style.color = "#218c4b";
+  } else {
+    button.classList.add("wrong");
+    document.getElementById("feedback").textContent = `✗ Väärin. Oikea vastaus on: ${item.correct}.`;
+    document.getElementById("feedback").style.color = "#c0392b";
+  }
+  document.getElementById("score").textContent = `Pisteet: ${score}`;
+  document.getElementById("next").style.display = "inline-block";
+}
+document.getElementById("next").onclick = () => {
+  index++;
+  if (index < questions.length) showQuestion();
+  else finish();
+};
+function finish() {
+  document.getElementById("quiz").style.display = "none";
+  document.getElementById("result").style.display = "block";
+  document.getElementById("finalScore").textContent = `${score} / ${questions.length}`;
+  const p = score / questions.length;
+  document.getElementById("resultText").textContent =
+    p === 1 ? "Täydet pisteet – erinomaista!" :
+    p >= .8 ? "Hieno tulos! Kemian käsitteet ovat hyvin hallussa." :
+    p >= .6 ? "Hyvä! Pienellä kertauksella tulos paranee vielä." :
+    "Hyvä harjoitus! Pelaa uudestaan ja yritä parantaa tulostasi.";
+}
+showQuestion();
+</script>
+</body>
+</html>
