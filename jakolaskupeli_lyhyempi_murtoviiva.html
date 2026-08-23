@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jakolaskupeli</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f5f7fb;
+      color: #1f2937;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+    .game {
+      width: min(700px, 100%);
+      background: white;
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 2rem;
+    }
+    .info {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+      font-weight: 700;
+    }
+    .tasks {
+      display: grid;
+      gap: 10px;
+    }
+    .task {
+      display: grid;
+      grid-template-columns: 120px 110px 1fr;
+      align-items: center;
+      gap: 12px;
+      min-height: 58px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #f9fafb;
+    }
+    .fraction {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      line-height: 1.05;
+      min-width: 52px;
+    }
+    .numerator {
+      border-bottom: 2px solid #1f2937;
+      padding: 0 3px 3px;
+      width: auto;
+      min-width: 24px;
+      text-align: center;
+    }
+    .denominator {
+      padding-top: 3px;
+      width: auto;
+      min-width: 24px;
+      text-align: center;
+    }
+    .expression {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    input {
+      width: 100%;
+      padding: 9px 10px;
+      font-size: 1.1rem;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      outline: none;
+    }
+    input:focus {
+      border-color: #6b7280;
+    }
+    input:disabled {
+      background: #f3f4f6;
+    }
+    .result {
+      font-weight: 700;
+      min-height: 24px;
+    }
+    .correct { color: #15803d; }
+    .wrong { color: #b91c1c; }
+
+    .buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+    }
+    button:hover:not(:disabled) {
+      filter: brightness(0.95);
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    #newTasksBtn {
+      background: #059669;
+    }
+    #restartBtn {
+      background: #7c3aed;
+    }
+    .final {
+      margin-top: 24px;
+      padding: 22px;
+      border-radius: 14px;
+      background: #eef2ff;
+      text-align: center;
+      display: none;
+    }
+    .final h2 {
+      margin-top: 0;
+    }
+    .final-score {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 560px) {
+      .task {
+        grid-template-columns: 105px 85px 1fr;
+      }
+      .game {
+        padding: 20px 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <h1>Jakolaskupeli</h1>
+    <div class="info">
+      <div>Kierros: <span id="round">1</span> / 3</div>
+      <div>Pisteet: <span id="score">0</span> / 30</div>
+    </div>
+
+    <section id="tasks" class="tasks"></section>
+
+    <div class="buttons" id="gameButtons">
+      <button id="checkBtn">Tarkista vastaukset</button>
+      <button id="newTasksBtn" disabled>Arvo uudet tehtävät</button>
+    </div>
+
+    <section id="final" class="final">
+      <h2>Peli päättyi!</h2>
+      <div id="finalScore" class="final-score"></div>
+      <button id="restartBtn">Pelaa uudestaan</button>
+    </section>
+  </main>
+
+<script>
+  const TOTAL_ROUNDS = 3;
+  const TASKS_PER_ROUND = 10;
+
+  let round = 1;
+  let score = 0;
+  let tasks = [];
+  let checked = false;
+
+  const tasksEl = document.getElementById("tasks");
+  const roundEl = document.getElementById("round");
+  const scoreEl = document.getElementById("score");
+  const checkBtn = document.getElementById("checkBtn");
+  const newTasksBtn = document.getElementById("newTasksBtn");
+  const gameButtons = document.getElementById("gameButtons");
+  const finalEl = document.getElementById("final");
+  const finalScoreEl = document.getElementById("finalScore");
+  const restartBtn = document.getElementById("restartBtn");
+
+  function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function generateDivisionTask() {
+    // Vastaus on aina kokonaisluku 1–10.
+    // Jakaja on 1–10 ja jaettava pysyy aina enintään sadassa.
+    const answer = randomInt(1, 10);
+    const maxDivisor = Math.min(10, Math.floor(100 / answer));
+    const divisor = randomInt(1, maxDivisor);
+    const dividend = answer * divisor;
+
+    return { dividend, divisor, answer };
+  }
+
+  function generateTasks() {
+    checked = false;
+    tasks = [];
+    tasksEl.innerHTML = "";
+
+    for (let i = 0; i < TASKS_PER_ROUND; i++) {
+      const task = generateDivisionTask();
+      tasks.push(task);
+
+      const row = document.createElement("div");
+      row.className = "task";
+
+      const expression = document.createElement("div");
+      expression.className = "expression";
+
+      const fraction = document.createElement("span");
+      fraction.className = "fraction";
+      fraction.innerHTML = `
+        <span class="numerator">${task.dividend}</span>
+        <span class="denominator">${task.divisor}</span>
+      `;
+
+      const equals = document.createElement("span");
+      equals.textContent = "=";
+
+      expression.appendChild(fraction);
+      expression.appendChild(equals);
+
+      const input = document.createElement("input");
+      input.type = "number";
+      input.inputMode = "numeric";
+      input.autocomplete = "off";
+      input.min = "1";
+      input.max = "10";
+      input.step = "1";
+      input.setAttribute(
+        "aria-label",
+        `Vastaus laskuun ${task.dividend} jaettuna luvulla ${task.divisor}`
+      );
+
+      const result = document.createElement("div");
+      result.className = "result";
+
+      row.appendChild(expression);
+      row.appendChild(input);
+      row.appendChild(result);
+      tasksEl.appendChild(row);
+    }
+
+    checkBtn.disabled = false;
+    newTasksBtn.disabled = true;
+
+    const firstInput = tasksEl.querySelector("input");
+    if (firstInput) firstInput.focus();
+  }
+
+  function checkAnswers() {
+    if (checked) return;
+
+    const inputs = [...tasksEl.querySelectorAll("input")];
+    const results = [...tasksEl.querySelectorAll(".result")];
+
+    tasks.forEach((task, index) => {
+      const raw = inputs[index].value.trim();
+      const value = Number(raw);
+      inputs[index].disabled = true;
+
+      if (raw !== "" && Number.isInteger(value) && value === task.answer) {
+        score++;
+        results[index].textContent = "✓ Oikein";
+        results[index].className = "result correct";
+      } else {
+        results[index].textContent = `✗ Väärin (${task.answer})`;
+        results[index].className = "result wrong";
+      }
+    });
+
+    checked = true;
+    scoreEl.textContent = score;
+    checkBtn.disabled = true;
+
+    if (round < TOTAL_ROUNDS) {
+      newTasksBtn.disabled = false;
+    } else {
+      finishGame();
+    }
+  }
+
+  function nextRound() {
+    if (!checked || round >= TOTAL_ROUNDS) return;
+    round++;
+    roundEl.textContent = round;
+    generateTasks();
+  }
+
+  function finishGame() {
+    newTasksBtn.disabled = true;
+    finalScoreEl.textContent = `Sait ${score} / 30 pistettä.`;
+    finalEl.style.display = "block";
+    gameButtons.style.display = "none";
+  }
+
+  function restartGame() {
+    round = 1;
+    score = 0;
+    roundEl.textContent = round;
+    scoreEl.textContent = score;
+    finalEl.style.display = "none";
+    gameButtons.style.display = "flex";
+    generateTasks();
+  }
+
+  checkBtn.addEventListener("click", checkAnswers);
+  newTasksBtn.addEventListener("click", nextRound);
+  restartBtn.addEventListener("click", restartGame);
+
+  tasksEl.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    const inputs = [...tasksEl.querySelectorAll("input")];
+    const currentIndex = inputs.indexOf(event.target);
+
+    if (currentIndex >= 0 && currentIndex < inputs.length - 1) {
+      inputs[currentIndex + 1].focus();
+      event.preventDefault();
+    }
+  });
+
+  generateTasks();
+</script>
+</body>
+</html>
