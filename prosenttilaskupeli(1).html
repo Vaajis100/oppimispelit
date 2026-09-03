@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prosenttilaskupeli</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(135deg, #1d3557, #457b9d);
+      color: #1f2937;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .game {
+      width: min(900px, 100%);
+      background: white;
+      border-radius: 24px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    }
+    h1 {
+      text-align: center;
+      margin-top: 0;
+      color: #1d3557;
+      font-size: clamp(28px, 5vw, 46px);
+    }
+    .intro {
+      text-align: center;
+      font-size: 18px;
+      margin-bottom: 25px;
+    }
+    .topics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+    }
+    button {
+      border: none;
+      border-radius: 14px;
+      padding: 16px 18px;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: .2s;
+    }
+    button:hover { transform: translateY(-2px); }
+    .topic-btn {
+      background: #e9f3f8;
+      color: #1d3557;
+      min-height: 90px;
+    }
+    .topic-btn:hover { background: #d5eaf4; }
+    .exam-btn { background: #e63946; color: white; }
+    .primary { background: #2a9d8f; color: white; }
+    .secondary { background: #e5e7eb; color: #333; }
+    .hidden { display: none; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    .pill {
+      background: #edf2f7;
+      padding: 10px 14px;
+      border-radius: 999px;
+    }
+    .question-box {
+      background: #f8fafc;
+      border: 3px solid #dbeafe;
+      border-radius: 20px;
+      padding: 28px;
+      text-align: center;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    #question {
+      font-size: clamp(23px, 4vw, 34px);
+      line-height: 1.4;
+      margin: 10px 0 20px;
+    }
+    .answer-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    input {
+      width: min(300px, 100%);
+      padding: 15px;
+      border-radius: 12px;
+      border: 2px solid #9ca3af;
+      font-size: 22px;
+      text-align: center;
+    }
+    input:focus { outline: none; border-color: #2a9d8f; }
+    .feedback {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 18px;
+      line-height: 1.5;
+      min-height: 58px;
+    }
+    .correct { background: #dcfce7; color: #166534; }
+    .wrong { background: #fee2e2; color: #991b1b; }
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .progress {
+      height: 14px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background: #2a9d8f;
+      transition: width .3s;
+    }
+    .result { text-align: center; font-size: 20px; }
+    .score-big {
+      font-size: 52px;
+      font-weight: bold;
+      color: #1d3557;
+      margin: 20px 0;
+    }
+    .fraction {
+      display: inline-flex;
+      flex-direction: column;
+      vertical-align: middle;
+      text-align: center;
+      line-height: 1.05;
+      margin: 0 5px;
+    }
+    .fraction .top {
+      border-bottom: 2px solid currentColor;
+      padding: 0 5px 2px;
+    }
+    .fraction .bottom { padding-top: 2px; }
+    .small { font-size: 15px; color: #6b7280; }
+    @media (max-width: 600px) {
+      .game { padding: 20px; }
+      button { width: 100%; }
+      .answer-row { flex-direction: column; }
+      input { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="game">
+  <section id="menu">
+    <h1>🎯 Prosenttilaskupeli</h1>
+    <p class="intro">
+      Valitse harjoiteltava aihe. Jokaisessa harjoituksessa on 10 tehtävää.
+      Koetreenissä kaikki aihealueet sekoitetaan.
+    </p>
+    <div class="topics">
+      <button class="topic-btn" onclick="startGame('muunnokset')">🔄 Muunnokset<br><span class="small">prosentti ↔ desimaali ↔ murtoluku</span></button>
+      <button class="topic-btn" onclick="startGame('prosenttimaara')">🧮 Prosenttimäärä<br><span class="small">esim. 20 % luvusta 70</span></button>
+      <button class="topic-btn" onclick="startGame('kuinkamontaprosenttia')">📊 Kuinka monta prosenttia?<br><span class="small">esim. 5 luvusta 20</span></button>
+      <button class="topic-btn" onclick="startGame('muutosprosentti')">📈 Muutosprosentti<br><span class="small">kasvu ja väheneminen</span></button>
+      <button class="topic-btn" onclick="startGame('vertailuprosentti')">⚖️ Vertailuprosentti<br><span class="small">suurempi tai pienempi</span></button>
+      <button class="topic-btn" onclick="startGame('liuokset')">🧪 Liuoslaskut<br><span class="small">liuosten sekoittaminen</span></button>
+      <button class="topic-btn" onclick="startGame('perusarvo')">💰 Perusarvo<br><span class="small">kokonaisuuden selvittäminen</span></button>
+      <button class="topic-btn exam-btn" onclick="startGame('koe')">📝 KOETREENI<br><span style="font-size:15px;">Kaikki aihealueet</span></button>
+    </div>
+  </section>
+
+  <section id="play" class="hidden">
+    <div class="topbar">
+      <div class="pill" id="topicLabel">Aihe</div>
+      <div class="pill">Tehtävä <span id="questionNumber">1</span>/10</div>
+      <div class="pill">⭐ Pisteet: <span id="score">0</span></div>
+    </div>
+    <div class="progress"><div id="progressFill" class="progress-fill"></div></div>
+    <div class="question-box">
+      <div id="question"></div>
+      <div class="answer-row">
+        <input id="answer" type="text" autocomplete="off" placeholder="Kirjoita vastaus">
+        <button id="checkBtn" class="primary" onclick="checkAnswer()">Tarkista</button>
+      </div>
+      <div id="feedback" class="feedback"></div>
+      <div class="actions">
+        <button id="nextBtn" class="primary hidden" onclick="nextQuestion()">Seuraava tehtävä →</button>
+        <button class="secondary" onclick="backToMenu()">Lopeta</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="result" class="hidden">
+    <h1>Harjoitus valmis! 🎉</h1>
+    <div class="result">
+      Sait
+      <div class="score-big"><span id="finalScore">0</span> / 10</div>
+      <p id="resultText"></p>
+      <div class="actions">
+        <button class="primary" onclick="restartGame()">Pelaa uudelleen</button>
+        <button class="secondary" onclick="backToMenu()">Valitse toinen aihe</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+let currentTopic = "";
+let currentQuestion = 0;
+let score = 0;
+let correctAnswer = null;
+let explanation = "";
+let answerType = "number";
+let answered = false;
+const totalQuestions = 10;
+
+const topicNames = {
+  muunnokset: "Muunnokset",
+  prosenttimaara: "Prosenttimäärä",
+  kuinkamontaprosenttia: "Kuinka monta prosenttia?",
+  muutosprosentti: "Muutosprosentti",
+  vertailuprosentti: "Vertailuprosentti",
+  liuokset: "Liuoslaskut",
+  perusarvo: "Perusarvo",
+  koe: "Koetreeni"
+};
+
+function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function choice(array) { return array[Math.floor(Math.random() * array.length)]; }
+function round(value, decimals = 2) {
+  const factor = 10 ** decimals;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+}
+function formatNumber(value) {
+  if (Number.isInteger(value)) return String(value);
+  return String(round(value, 2)).replace(".", ",");
+}
+function gcd(a, b) {
+  while (b !== 0) { const temp = b; b = a % b; a = temp; }
+  return a;
+}
+function simplifyFraction(numerator, denominator) {
+  const d = gcd(numerator, denominator);
+  return [numerator / d, denominator / d];
+}
+function fractionHTML(a, b) {
+  return `<span class="fraction"><span class="top">${a}</span><span class="bottom">${b}</span></span>`;
+}
+
+function startGame(topic) {
+  currentTopic = topic;
+  currentQuestion = 0;
+  score = 0;
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("result").classList.add("hidden");
+  document.getElementById("play").classList.remove("hidden");
+  document.getElementById("topicLabel").textContent = topicNames[topic];
+  nextQuestion();
+}
+function restartGame() { startGame(currentTopic); }
+function backToMenu() {
+  document.getElementById("play").classList.add("hidden");
+  document.getElementById("result").classList.add("hidden");
+  document.getElementById("menu").classList.remove("hidden");
+}
+function nextQuestion() {
+  if (currentQuestion >= totalQuestions) { showResult(); return; }
+  currentQuestion++;
+  answered = false;
+  document.getElementById("questionNumber").textContent = currentQuestion;
+  document.getElementById("score").textContent = score;
+  document.getElementById("progressFill").style.width = ((currentQuestion - 1) / totalQuestions * 100) + "%";
+  const answerInput = document.getElementById("answer");
+  answerInput.value = "";
+  answerInput.disabled = false;
+  answerInput.focus();
+  document.getElementById("checkBtn").classList.remove("hidden");
+  document.getElementById("nextBtn").classList.add("hidden");
+  const feedback = document.getElementById("feedback");
+  feedback.textContent = "";
+  feedback.className = "feedback";
+  generateQuestion();
+}
+function generateQuestion() {
+  let topic = currentTopic;
+  if (topic === "koe") {
+    topic = choice(["muunnokset","prosenttimaara","kuinkamontaprosenttia","muutosprosentti","vertailuprosentti","liuokset","perusarvo"]);
+    document.getElementById("topicLabel").textContent = "Koetreeni: " + topicNames[topic];
+  }
+  if (topic === "muunnokset") generateConversion();
+  if (topic === "prosenttimaara") generatePercentAmount();
+  if (topic === "kuinkamontaprosenttia") generateHowManyPercent();
+  if (topic === "muutosprosentti") generateChangePercent();
+  if (topic === "vertailuprosentti") generateComparisonPercent();
+  if (topic === "liuokset") generateSolution();
+  if (topic === "perusarvo") generateBaseValue();
+}
+function generateConversion() {
+  const mode = randomInt(1, 4);
+  const percentages = [10,20,25,30,40,50,60,70,75,80,90];
+  const p = choice(percentages);
+  if (mode === 1) {
+    correctAnswer = p / 100;
+    answerType = "number";
+    document.getElementById("question").innerHTML = `Muuta <strong>${p} %</strong> desimaaliluvuksi.`;
+    explanation = `${p} % = ${p} ÷ 100 = ${formatNumber(correctAnswer)}.`;
+  } else if (mode === 2) {
+    const decimal = p / 100;
+    correctAnswer = p;
+    answerType = "number";
+    document.getElementById("question").innerHTML = `Muuta desimaaliluku <strong>${formatNumber(decimal)}</strong> prosenttiluvuksi.<br>Vastaa pelkällä luvulla.`;
+    explanation = `${formatNumber(decimal)} × 100 = ${p} %.`;
+  } else if (mode === 3) {
+    const [num, den] = simplifyFraction(p, 100);
+    correctAnswer = `${num}/${den}`;
+    answerType = "fraction";
+    document.getElementById("question").innerHTML = `Muuta <strong>${p} %</strong> murtoluvuksi mahdollisimman supistetussa muodossa.<br>Kirjoita esimerkiksi <strong>1/4</strong>.`;
+    explanation = `${p} % = ${fractionHTML(p, 100)} = ${fractionHTML(num, den)}.`;
+  } else {
+    const [num, den] = choice([[1,2],[1,4],[3,4],[1,5],[2,5],[3,5],[4,5],[1,10],[3,10],[7,10]]);
+    correctAnswer = num / den * 100;
+    answerType = "number";
+    document.getElementById("question").innerHTML = `Muuta murtoluku ${fractionHTML(num, den)} prosenttiluvuksi.<br>Vastaa pelkällä luvulla.`;
+    explanation = `${num} ÷ ${den} × 100 = ${formatNumber(correctAnswer)} %.`;
+  }
+}
+function generatePercentAmount() {
+  const p = choice([10,20,25,30,40,50,60,70,75,80,90]);
+  const base = randomInt(2, 20) * 10;
+  correctAnswer = base * p / 100;
+  answerType = "number";
+  document.getElementById("question").innerHTML = `Kuinka paljon on <strong>${p} % luvusta ${base}</strong>?`;
+  explanation = `${p} % = ${formatNumber(p / 100)}.<br>${formatNumber(p / 100)} × ${base} = <strong>${formatNumber(correctAnswer)}</strong>.`;
+}
+function generateHowManyPercent() {
+  const p = choice([10,20,25,40,50,60,75,80]);
+  const whole = randomInt(2, 15) * 20;
+  const part = whole * p / 100;
+  correctAnswer = p;
+  answerType = "number";
+  document.getElementById("question").innerHTML = `Kuinka monta prosenttia luku <strong>${formatNumber(part)}</strong> on luvusta <strong>${whole}</strong>?`;
+  explanation = `${formatNumber(part)} ÷ ${whole} × 100 = <strong>${p} %</strong>.`;
+}
+function generateChangePercent() {
+  const oldValue = randomInt(5,25) * 4;
+  const changePercent = choice([10,20,25,50]);
+  const increasing = Math.random() < 0.5;
+  let newValue = increasing ? oldValue * (1 + changePercent / 100) : oldValue * (1 - changePercent / 100);
+  newValue = round(newValue, 2);
+  correctAnswer = changePercent;
+  answerType = "number";
+  document.getElementById("question").innerHTML = `Määrä muuttuu luvusta <strong>${oldValue}</strong> lukuun <strong>${formatNumber(newValue)}</strong>.<br><br>Kuinka monta prosenttia määrä <strong>${increasing ? "kasvoi" : "väheni"}</strong>?`;
+  const difference = Math.abs(newValue - oldValue);
+  explanation = `Muutos = ${formatNumber(difference)}.<br>${formatNumber(difference)} ÷ ${oldValue} × 100 = <strong>${changePercent} %</strong>.`;
+}
+function generateComparisonPercent() {
+  const base = randomInt(2, 15) * 10;
+  const percentage = choice([20,25,50,75,100]);
+  const smaller = Math.random() < 0.5;
+  if (smaller) {
+    const difference = base * percentage / 100;
+    const comparison = base - difference;
+    correctAnswer = percentage;
+    answerType = "number";
+    document.getElementById("question").innerHTML = `Kuinka monta prosenttia luku <strong>${formatNumber(comparison)}</strong> on pienempi kuin luku <strong>${base}</strong>?`;
+    explanation = `Erotus = ${formatNumber(difference)}.<br>Vertailukohteena on ${base}.<br>${formatNumber(difference)} ÷ ${base} × 100 = <strong>${percentage} %</strong>.`;
+  } else {
+    const increase = base * percentage / 100;
+    const comparison = base + increase;
+    correctAnswer = percentage;
+    answerType = "number";
+    document.getElementById("question").innerHTML = `Kuinka monta prosenttia luku <strong>${formatNumber(comparison)}</strong> on suurempi kuin luku <strong>${base}</strong>?`;
+    explanation = `Erotus = ${formatNumber(increase)}.<br>Vertailukohteena on ${base}.<br>${formatNumber(increase)} ÷ ${base} × 100 = <strong>${percentage} %</strong>.`;
+  }
+}
+function generateSolution() {
+  const amount1 = choice([100,200,300,400,500]);
+  const amount2 = choice([100,200,300,400,500]);
+  const percent1 = choice([5,10,15,20,25]);
+  let percent2 = choice([5,10,15,20,25]);
+  while (percent2 === percent1) percent2 = choice([5,10,15,20,25]);
+  const substance1 = amount1 * percent1 / 100;
+  const substance2 = amount2 * percent2 / 100;
+  correctAnswer = round((substance1 + substance2) / (amount1 + amount2) * 100, 2);
+  answerType = "number";
+  document.getElementById("question").innerHTML = `<strong>${amount1} g</strong> ${percent1} % suolaliuosta ja <strong>${amount2} g</strong> ${percent2} % suolaliuosta sekoitetaan.<br><br>Mikä on uuden liuoksen suolapitoisuus prosentteina?<br><span class="small">Tarvittaessa pyöristä kahden desimaalin tarkkuuteen.</span>`;
+  explanation = `Ensimmäisessä liuoksessa on suolaa ${amount1} × ${formatNumber(percent1 / 100)} = ${formatNumber(substance1)} g.<br><br>Toisessa on ${amount2} × ${formatNumber(percent2 / 100)} = ${formatNumber(substance2)} g.<br><br>Suolaa yhteensä = ${formatNumber(substance1 + substance2)} g.<br>Liuosta yhteensä = ${amount1 + amount2} g.<br><br>${formatNumber(substance1 + substance2)} ÷ ${amount1 + amount2} × 100 = <strong>${formatNumber(correctAnswer)} %</strong>.`;
+}
+function generateBaseValue() {
+  const p = choice([10,20,25,40,50,60,75,80]);
+  const whole = randomInt(2,20) * 10;
+  const part = whole * p / 100;
+  correctAnswer = whole;
+  answerType = "number";
+  document.getElementById("question").innerHTML = `Luku <strong>${formatNumber(part)}</strong> on <strong>${p} %</strong> jostakin luvusta.<br><br>Mikä tämä alkuperäinen luku on?`;
+  explanation = `${p} % = ${formatNumber(p / 100)}.<br>${formatNumber(part)} ÷ ${formatNumber(p / 100)} = <strong>${whole}</strong>.`;
+}
+function normalizeNumber(value) {
+  value = value.trim().replace("%","").replace(/\s/g,"").replace(",",".");
+  return Number(value);
+}
+function checkAnswer() {
+  if (answered) return;
+  const input = document.getElementById("answer").value.trim();
+  if (input === "") return;
+  let isCorrect = false;
+  if (answerType === "fraction") {
+    const cleaned = input.replace(/\s/g,"");
+    const parts = cleaned.split("/");
+    if (parts.length === 2) {
+      const num = Number(parts[0]), den = Number(parts[1]);
+      if (Number.isFinite(num) && Number.isFinite(den) && den !== 0) {
+        const [correctNum, correctDen] = correctAnswer.split("/").map(Number);
+        isCorrect = Math.abs(num / den - correctNum / correctDen) < 0.0001;
+      }
+    }
+  } else {
+    const userAnswer = normalizeNumber(input);
+    if (Number.isFinite(userAnswer)) isCorrect = Math.abs(userAnswer - correctAnswer) < 0.011;
+  }
+  answered = true;
+  document.getElementById("answer").disabled = true;
+  document.getElementById("checkBtn").classList.add("hidden");
+  document.getElementById("nextBtn").classList.remove("hidden");
+  const feedback = document.getElementById("feedback");
+  if (isCorrect) {
+    score++;
+    document.getElementById("score").textContent = score;
+    feedback.className = "feedback correct";
+    feedback.innerHTML = `✅ <strong>Oikein!</strong><br>${explanation}`;
+  } else {
+    feedback.className = "feedback wrong";
+    const answerText = answerType === "fraction" ? correctAnswer : formatNumber(correctAnswer);
+    feedback.innerHTML = `❌ <strong>Ei aivan.</strong><br>Oikea vastaus on <strong>${answerText}</strong>.<br><br>${explanation}`;
+  }
+  document.getElementById("nextBtn").focus();
+}
+function showResult() {
+  document.getElementById("play").classList.add("hidden");
+  document.getElementById("result").classList.remove("hidden");
+  document.getElementById("finalScore").textContent = score;
+  const percent = score / totalQuestions * 100;
+  let text = "";
+  if (percent === 100) text = "🏆 Täydellinen suoritus! Prosenttilaskut ovat todella hyvin hallussa.";
+  else if (percent >= 80) text = "🌟 Hieno suoritus! Olet jo erittäin hyvällä tasolla.";
+  else if (percent >= 60) text = "👍 Hyvä! Vielä hieman harjoittelua ennen koetta.";
+  else if (percent >= 40) text = "📚 Perusidea alkaa olla hallussa. Tee aiheesta vielä uusi kierros.";
+  else text = "💪 Harjoittelua kannattaa jatkaa. Katso erityisesti tehtävien ratkaisut huolellisesti.";
+  document.getElementById("resultText").textContent = `${text} Tuloksesi oli ${percent} %.`;
+}
+document.getElementById("answer").addEventListener("keydown", function(event) {
+  if (event.key === "Enter") {
+    if (!answered) checkAnswer();
+    else nextQuestion();
+  }
+});
+</script>
+</body>
+</html>
