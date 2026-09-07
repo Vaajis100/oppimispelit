@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kokonaislukupeli</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(135deg, #eef4ff, #f8fbff);
+      color: #1f2937;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 18px 50px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 2.2rem;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #5b6472;
+      margin-bottom: 24px;
+    }
+
+    .mode-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    .mode-btn {
+      background: #e5e7eb;
+      color: #111827;
+      font-weight: 700;
+    }
+
+    .mode-btn.active {
+      background: #2563eb;
+      color: white;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      padding: 24px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .score {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .new-btn {
+      background: #10b981;
+      color: white;
+      font-weight: 700;
+    }
+
+    .check-btn {
+      background: #2563eb;
+      color: white;
+      font-weight: 700;
+    }
+
+    .reset-btn {
+      background: #f3f4f6;
+      color: #374151;
+      font-weight: 700;
+    }
+
+    .tasks {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .task {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 14px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      background: #fafafa;
+    }
+
+    .task.correct {
+      border-color: #22c55e;
+      background: #f0fdf4;
+    }
+
+    .task.wrong {
+      border-color: #ef4444;
+      background: #fef2f2;
+    }
+
+    .number {
+      min-width: 28px;
+      font-weight: 700;
+      color: #6b7280;
+    }
+
+    .expression {
+      flex: 1;
+      font-size: 1.2rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    input {
+      width: 90px;
+      padding: 9px 10px;
+      font-size: 1.1rem;
+      border: 2px solid #cbd5e1;
+      border-radius: 8px;
+      text-align: center;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #2563eb;
+    }
+
+    .feedback {
+      min-width: 24px;
+      font-size: 1.3rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 22px;
+    }
+
+    .info {
+      margin-top: 16px;
+      padding: 12px 14px;
+      background: #eff6ff;
+      border-radius: 10px;
+      color: #1e3a8a;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 680px) {
+      .tasks { grid-template-columns: 1fr; }
+      h1 { font-size: 1.8rem; }
+      .task { padding: 11px; }
+      .expression { font-size: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Kokonaislukupeli</h1>
+    <div class="subtitle">Harjoittele yhteen- ja vähennyslaskua kokonaisluvuilla.</div>
+
+    <div class="mode-buttons">
+      <button id="basicModeBtn" class="mode-btn active">1. Plus- ja miinuslaskut</button>
+      <button id="signModeBtn" class="mode-btn">2. Merkkisäännöt</button>
+    </div>
+
+    <div class="panel">
+      <div class="topbar">
+        <div class="score">Pisteet: <span id="score">0</span> / 10</div>
+        <button class="new-btn" id="newTasksBtn">Arvo uudet tehtävät</button>
+      </div>
+
+      <div id="tasks" class="tasks"></div>
+
+      <div class="controls">
+        <button class="check-btn" id="checkBtn">Tarkista vastaukset</button>
+        <button class="reset-btn" id="clearBtn">Tyhjennä vastaukset</button>
+      </div>
+
+      <div id="info" class="info">
+        Käytössä ovat luvut −10...10. Laske jokainen tehtävä ja kirjoita vastaus ruutuun.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let mode = "basic";
+    let tasks = [];
+
+    const tasksEl = document.getElementById("tasks");
+    const scoreEl = document.getElementById("score");
+    const infoEl = document.getElementById("info");
+    const basicModeBtn = document.getElementById("basicModeBtn");
+    const signModeBtn = document.getElementById("signModeBtn");
+    const newTasksBtn = document.getElementById("newTasksBtn");
+    const checkBtn = document.getElementById("checkBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function formatNormalNumber(n) {
+      return n < 0 ? `(${n})` : `${n}`;
+    }
+
+    function formatSignedNumber(n) {
+      return n >= 0 ? `(+${n})` : `(${n})`;
+    }
+
+    function createBasicTask() {
+      const a = randInt(-10, 10);
+      const b = randInt(-10, 10);
+      const op = Math.random() < 0.5 ? "+" : "-";
+      const answer = op === "+" ? a + b : a - b;
+
+      let expression;
+      if (op === "+") {
+        expression = `${a} + ${formatNormalNumber(b)} =`;
+      } else {
+        expression = `${a} - ${formatNormalNumber(b)} =`;
+      }
+
+      return { expression, answer };
+    }
+
+    function createSignTask() {
+      const a = randInt(-10, 10);
+      const magnitude = randInt(0, 10);
+      const signedB = Math.random() < 0.5 ? magnitude : -magnitude;
+      const op = Math.random() < 0.5 ? "+" : "-";
+      const answer = op === "+" ? a + signedB : a - signedB;
+
+      const expression = `${a} ${op} ${formatSignedNumber(signedB)} =`;
+      return { expression, answer };
+    }
+
+    function generateTasks() {
+      tasks = [];
+      for (let i = 0; i < 10; i++) {
+        tasks.push(mode === "basic" ? createBasicTask() : createSignTask());
+      }
+      renderTasks();
+      scoreEl.textContent = "0";
+    }
+
+    function renderTasks() {
+      tasksEl.innerHTML = "";
+
+      tasks.forEach((task, index) => {
+        const row = document.createElement("div");
+        row.className = "task";
+        row.dataset.index = index;
+
+        row.innerHTML = `
+          <div class="number">${index + 1}.</div>
+          <div class="expression">${task.expression}</div>
+          <input
+            type="number"
+            inputmode="numeric"
+            aria-label="Vastaus tehtävään ${index + 1}"
+            data-index="${index}"
+          />
+          <div class="feedback"></div>
+        `;
+
+        tasksEl.appendChild(row);
+      });
+
+      const inputs = tasksEl.querySelectorAll("input");
+      inputs.forEach((input, index) => {
+        input.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            if (index < inputs.length - 1) {
+              inputs[index + 1].focus();
+            } else {
+              checkAnswers();
+            }
+          }
+        });
+      });
+
+      if (inputs.length) inputs[0].focus();
+    }
+
+    function checkAnswers() {
+      const rows = tasksEl.querySelectorAll(".task");
+      let score = 0;
+
+      rows.forEach((row, index) => {
+        const input = row.querySelector("input");
+        const feedback = row.querySelector(".feedback");
+        const value = input.value.trim();
+
+        row.classList.remove("correct", "wrong");
+
+        if (value === "") {
+          feedback.textContent = "";
+          return;
+        }
+
+        if (Number(value) === tasks[index].answer) {
+          score++;
+          row.classList.add("correct");
+          feedback.textContent = "✓";
+        } else {
+          row.classList.add("wrong");
+          feedback.textContent = "✗";
+        }
+      });
+
+      scoreEl.textContent = score;
+    }
+
+    function clearAnswers() {
+      tasksEl.querySelectorAll("input").forEach(input => input.value = "");
+      tasksEl.querySelectorAll(".task").forEach(row => {
+        row.classList.remove("correct", "wrong");
+        row.querySelector(".feedback").textContent = "";
+      });
+      scoreEl.textContent = "0";
+
+      const first = tasksEl.querySelector("input");
+      if (first) first.focus();
+    }
+
+    function setMode(newMode) {
+      mode = newMode;
+
+      basicModeBtn.classList.toggle("active", mode === "basic");
+      signModeBtn.classList.toggle("active", mode === "sign");
+
+      if (mode === "basic") {
+        infoEl.innerHTML =
+          "Käytössä ovat luvut −10...10. Tehtävät ovat esimerkiksi <strong>4 − 8</strong>, <strong>−7 − 2</strong> ja <strong>3 + 7</strong>.";
+      } else {
+        infoEl.innerHTML =
+          "Harjoittele merkkisääntöjä. Tehtävät ovat esimerkiksi <strong>4 − (−2)</strong>, <strong>5 + (−3)</strong> ja <strong>4 − (+2)</strong>.";
+      }
+
+      generateTasks();
+    }
+
+    basicModeBtn.addEventListener("click", () => setMode("basic"));
+    signModeBtn.addEventListener("click", () => setMode("sign"));
+    newTasksBtn.addEventListener("click", generateTasks);
+    checkBtn.addEventListener("click", checkAnswers);
+    clearBtn.addEventListener("click", clearAnswers);
+
+    generateTasks();
+  </script>
+</body>
+</html>
