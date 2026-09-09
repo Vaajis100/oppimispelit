@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Kemia 8 – Kertauspeli</title>
+<style>
+  :root{--bg:#f4f7fb;--card:#fff;--text:#18212f;--muted:#667085;--ok:#18864b;--bad:#c33b35;--accent:#2f6fed;--border:#d9e1ec;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#eef4ff,#f8fbff);color:var(--text)}
+  .wrap{max-width:980px;margin:0 auto;padding:24px}
+  header{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
+  h1{font-size:clamp(28px,4vw,42px);margin:0}
+  .sub{color:var(--muted);margin-top:6px}
+  .score{background:var(--card);border:1px solid var(--border);padding:12px 16px;border-radius:14px;font-weight:700}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:22px;box-shadow:0 10px 30px rgba(25,45,80,.08)}
+  .bar{height:10px;background:#e8edf5;border-radius:999px;overflow:hidden;margin:14px 0 22px}
+  .bar>div{height:100%;background:var(--accent);width:0;transition:.25s}
+  .tag{display:inline-block;background:#edf3ff;color:#2456b7;border-radius:999px;padding:6px 10px;font-size:13px;font-weight:700;margin-bottom:12px}
+  .q{font-size:clamp(22px,3vw,30px);font-weight:800;line-height:1.25;margin:8px 0 18px}
+  .options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  button{font:inherit}
+  .opt{padding:15px;border:1px solid var(--border);background:#fff;border-radius:14px;cursor:pointer;text-align:left;font-weight:650;transition:.15s}
+  .opt:hover{border-color:#9bb8ff;transform:translateY(-1px)}
+  .opt.correct{border-color:#7ad7a5;background:#eefbf4;color:#10683a}
+  .opt.wrong{border-color:#ef9a96;background:#fff2f1;color:#9c2823}
+  .inputrow{display:flex;gap:10px;flex-wrap:wrap}
+  input{flex:1;min-width:180px;padding:14px;border:1px solid var(--border);border-radius:12px;font-size:18px}
+  .primary{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:13px 18px;cursor:pointer;font-weight:800}
+  .secondary{background:#fff;color:var(--text);border:1px solid var(--border);border-radius:12px;padding:13px 18px;cursor:pointer;font-weight:750}
+  .feedback{margin-top:16px;padding:14px 16px;border-radius:12px;display:none;line-height:1.45}
+  .feedback.ok{display:block;background:#effaf4;color:#11673b;border:1px solid #b7e6cc}
+  .feedback.bad{display:block;background:#fff2f1;color:#9b2d28;border:1px solid #f0b5b1}
+  .actions{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:20px;flex-wrap:wrap}
+  .atom{display:grid;place-items:center;margin:4px 0 16px}
+  .atom svg{max-width:320px;width:100%;height:auto}
+  .result{text-align:center;padding:18px}
+  .result h2{font-size:34px;margin:8px 0}
+  .small{color:var(--muted);font-size:14px}
+  @media(max-width:680px){.options{grid-template-columns:1fr}.wrap{padding:14px}.card{padding:17px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Kemia 8 – Kertauspeli</h1>
+      <div class="sub">Atomin rakenne • jaksollinen järjestelmä • ionit • suolat • molekyylit</div>
+    </div>
+    <div class="score" id="score">Pisteet: 0 / 0</div>
+  </header>
+
+  <div class="card" id="game">
+    <div class="bar"><div id="progress"></div></div>
+    <div id="content"></div>
+  </div>
+</div>
+
+<script>
+const questions = [
+  {cat:'KPL 11 – Atomin rakenne',type:'mc',q:'Mikä hiukkanen sijaitsee atomin ytimessä ja on varaukseltaan positiivinen?',opts:['Elektroni','Protoni','Neutroni','Elektronikuori'],a:1,exp:'Protoni sijaitsee ytimessä ja sen varaus on +1.'},
+  {cat:'KPL 11 – Atomin rakenne',type:'mc',q:'Mikä on neutronin sähkövaraus?',opts:['+1','−1','0','+2'],a:2,exp:'Neutroni on sähköisesti varaukseton.'},
+  {cat:'KPL 11 – Atomin rakenne',type:'mc',q:'Mitä järjestysluku kertoo?',opts:['Neutronien määrän','Protonien määrän','Elektronikuorten määrän','Massaluvun'],a:1,exp:'Järjestysluku kertoo protonien määrän. Neutraalilla atomilla se kertoo myös elektronien määrän.'},
+  {cat:'KPL 11 – Atomin rakenne',type:'input',q:'Atomilla on 8 protonia. Mikä on sen järjestysluku?',answers:['8'],exp:'Järjestysluku = protonien määrä.'},
+  {cat:'KPL 12 – Jaksollinen järjestelmä',type:'mc',q:'Mitä jakson numero kertoo atomin rakenteesta?',opts:['Ulkoelektronien määrän','Elektronikuorten määrän','Protonien varauksen','Neutronien määrän'],a:1,exp:'Jakso kertoo käytössä olevien elektronikuorten määrän.'},
+  {cat:'KPL 12 – Jaksollinen järjestelmä',type:'mc',q:'Mitä pääryhmän numero yleensä kertoo?',opts:['Elektronikuorten määrän','Ulkoelektronien määrän','Neutronien määrän','Massaluvun'],a:1,exp:'Pääryhmä kertoo ulkoelektronien määrän. Ryhmissä 13–18 vähennetään 10.'},
+  {cat:'KPL 12 – Jaksollinen järjestelmä',type:'mc',q:'Mihin ryhmään jalokaasut kuuluvat?',opts:['1','2','17','18'],a:3,exp:'Jalokaasut ovat ryhmässä 18.'},
+  {cat:'KPL 12 – Jaksollinen järjestelmä',type:'mc',q:'Mitä oktetti tarkoittaa?',opts:['Kahdeksaa protonia','Kahdeksaa neutronia','Kahdeksaa ulkoelektronia','Kahdeksaa elektronikuorta'],a:2,exp:'Oktetti tarkoittaa kahdeksaa elektronia uloimmalla kuorella.'},
+  {cat:'KPL 12 – Jaksollinen järjestelmä',type:'input',q:'Natriumin elektronirakenne on 2, 8, 1. Montako ulkoelektronia natriumilla on?',answers:['1'],exp:'Uloimmalla kuorella on yksi elektroni.'},
+  {cat:'KPL 12 – Jaksollinen järjestelmä',type:'input',q:'Magnesiumin elektronirakenne on 2, 8, 2. Monennellako jaksolla magnesium on?',answers:['3','kolmannella','3.'],exp:'Elektronikuoria on kolme, joten magnesium on 3. jaksolla.'},
+  {cat:'KPL 13 – Ionit',type:'mc',q:'Miten positiivinen ioni syntyy?',opts:['Atomi vastaanottaa elektroneja','Atomi luovuttaa elektroneja','Atomi vastaanottaa protoneja','Atomi luovuttaa neutroneja'],a:1,exp:'Kun atomi luovuttaa negatiivisia elektroneja, siitä tulee positiivinen ioni.'},
+  {cat:'KPL 13 – Ionit',type:'mc',q:'Miten negatiivinen ioni syntyy?',opts:['Atomi vastaanottaa elektroneja','Atomi luovuttaa elektroneja','Atomi luovuttaa protoneja','Atomi vastaanottaa neutroneja'],a:0,exp:'Kun atomi vastaanottaa elektroneja, sen kokonaisvaraus muuttuu negatiiviseksi.'},
+  {cat:'KPL 13 – Ionit',type:'input',q:'Mikä ioniyhdisteen kaava muodostuu ioneista Na⁺ ja Cl⁻?',answers:['nacl'],exp:'Varaukset kumoavat toisensa suhteessa 1:1, joten kaava on NaCl.'},
+  {cat:'KPL 13 – Ionit',type:'input',q:'Mikä ioniyhdisteen kaava muodostuu ioneista Mg²⁺ ja Cl⁻?',answers:['mgcl2','mgcl₂'],exp:'Yksi Mg²⁺ tarvitsee kaksi Cl⁻-ionia: MgCl₂.'},
+  {cat:'KPL 13 – Ionit',type:'input',q:'Mikä ioniyhdisteen kaava muodostuu ioneista Al³⁺ ja O²⁻?',answers:['al2o3','al₂o₃'],exp:'Pienin yhteinen varaus on 6: tarvitaan 2 Al³⁺-ionia ja 3 O²⁻-ionia, joten Al₂O₃.'},
+  {cat:'KPL 14 – Suolat',type:'mc',q:'Mikä on yleisnimi ioniyhdisteille?',opts:['Metallit','Suolat','Molekyylit','Jalokaasut'],a:1,exp:'Suola on yleisnimi ioniyhdisteille.'},
+  {cat:'KPL 14 – Suolat',type:'mc',q:'Mikä on yhdisteen NaCl nimi?',opts:['Natriumkloridi','Natriumkloori','Mononatriumkloridi','Kloorinatrium'],a:0,exp:'NaCl on natriumkloridi.'},
+  {cat:'KPL 14 – Suolat',type:'input',q:'Mikä on yhdisteen MgO nimi?',answers:['magnesiumoksidi'],exp:'MgO on magnesiumoksidi.'},
+  {cat:'KPL 15 – Molekyylit',type:'mc',q:'Mikä on kovalenttinen sidos?',opts:['Atomit jakavat yhteisen elektroniparin','Protonit siirtyvät atomilta toiselle','Neutronit sitovat atomit yhteen','Metalli luovuttaa kaikki elektroninsa'],a:0,exp:'Kovalenttisessa sidoksessa atomit jakavat yhden tai useampia yhteisiä elektronipareja.'},
+  {cat:'KPL 15 – Molekyylit',type:'mc',q:'Kuinka monta yhteistä elektroniparia on happimolekyylin O₂ kaksoissidoksessa?',opts:['1','2','3','4'],a:1,exp:'Kaksoissidos tarkoittaa kahta yhteistä elektroniparia.'},
+  {cat:'KPL 15 – Molekyylit',type:'mc',q:'Mikä näistä on alkuainemolekyyli?',opts:['H₂O','CO₂','O₂','NaCl'],a:2,exp:'O₂ koostuu vain yhden alkuaineen, hapen, atomeista.'},
+  {cat:'KPL 15 – Molekyylit',type:'mc',q:'Mikä näistä on molekyyliyhdiste?',opts:['O₂','N₂','H₂O','NaCl'],a:2,exp:'H₂O on eri epämetallien muodostama molekyyliyhdiste.'},
+  {cat:'KPL 15 – Molekyylit',type:'input',q:'Mikä on CO₂:n nimi?',answers:['hiilidioksidi'],exp:'CO₂ on hiilidioksidi: di- ilmaisee kaksi happiatomia.'},
+  {cat:'KPL 15 – Molekyylit',type:'input',q:'Mikä etuliite tarkoittaa kolmea molekyyliyhdisteiden nimeämisessä?',answers:['tri'],exp:'Kolmea ilmaisee etuliite tri-.'}
+];
+
+let pool=[], index=0, points=0, answered=0, locked=false;
+function shuffle(a){return [...a].sort(()=>Math.random()-0.5)}
+function start(){pool=shuffle(questions).slice(0,15);index=0;points=0;answered=0;locked=false;render()}
+function normalize(s){return s.toLowerCase().trim().replace(/\s+/g,'').replace(/₂/g,'2').replace(/₃/g,'3').replace(/⁺/g,'+').replace(/⁻/g,'-')}
+function update(){document.getElementById('score').textContent=`Pisteet: ${points} / ${answered}`;document.getElementById('progress').style.width=`${(index/pool.length)*100}%`}
+function render(){update(); if(index>=pool.length){return finish()} const q=pool[index]; locked=false; let html=`<div class="tag">${q.cat}</div><div class="q">${index+1}. ${q.q}</div>`;
+ if(q.type==='mc'){
+   html+=`<div class="options">${q.opts.map((o,i)=>`<button class="opt" onclick="choose(${i})">${o}</button>`).join('')}</div>`;
+ } else {
+   html+=`<div class="inputrow"><input id="answer" autocomplete="off" placeholder="Kirjoita vastaus" onkeydown="if(event.key==='Enter')checkInput()"><button class="primary" onclick="checkInput()">Tarkista</button></div>`;
+ }
+ html+=`<div id="fb" class="feedback"></div><div class="actions"><span class="small">Tehtävä ${index+1} / ${pool.length}</span><button id="next" class="secondary" style="display:none" onclick="nextQ()">Seuraava</button></div>`;
+ document.getElementById('content').innerHTML=html; if(q.type==='input') setTimeout(()=>document.getElementById('answer').focus(),50)
+}
+function choose(i){if(locked)return;locked=true;const q=pool[index];answered++;const ok=i===q.a;if(ok)points++;document.querySelectorAll('.opt').forEach((b,j)=>{b.disabled=true;if(j===q.a)b.classList.add('correct');else if(j===i&&!ok)b.classList.add('wrong')});feedback(ok,q.exp);update()}
+function checkInput(){if(locked)return;const q=pool[index];const el=document.getElementById('answer');const val=normalize(el.value);if(!val)return;locked=true;answered++;const ok=q.answers.map(normalize).includes(val);if(ok)points++;el.disabled=true;el.style.borderColor=ok?'#7ad7a5':'#ef9a96';feedback(ok,q.exp);update()}
+function feedback(ok,exp){const fb=document.getElementById('fb');fb.className='feedback '+(ok?'ok':'bad');fb.innerHTML=`<strong>${ok?'Oikein!':'Ei aivan.'}</strong> ${exp}`;document.getElementById('next').style.display='inline-block'}
+function nextQ(){index++;render()}
+function finish(){document.getElementById('progress').style.width='100%';const pct=Math.round(points/pool.length*100);let msg=pct>=90?'Erinomainen! Osaaminen näyttää vahvalta.':pct>=75?'Hyvä tulos! Kertaa vielä muutama epävarma kohta.':pct>=60?'Perusasiat ovat hallussa, mutta kertaus kannattaa.':'Käy vielä teoria läpi ja pelaa uusi kierros.';document.getElementById('content').innerHTML=`<div class="result"><div class="tag">Kierros valmis</div><h2>${points} / ${pool.length} pistettä</h2><p style="font-size:20px">${pct} %</p><p>${msg}</p><button class="primary" onclick="start()">Uusi 15 tehtävän kierros</button></div>`;update()}
+start();
+</script>
+</body>
+</html>
