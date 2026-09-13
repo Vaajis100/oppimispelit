@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kemiallisten kaavojen peli</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#172033}
+*{box-sizing:border-box} body{margin:0;background:#f4f7fb;min-height:100vh;display:grid;place-items:center;padding:20px}
+.game{width:min(760px,100%);background:white;border-radius:22px;padding:28px;box-shadow:0 12px 35px #0002}
+.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:22px}
+h1{font-size:clamp(24px,4vw,36px);margin:0}.score{font-weight:800;background:#eef3ff;padding:10px 14px;border-radius:14px}
+.progress{height:9px;background:#e7ebf2;border-radius:99px;overflow:hidden;margin-bottom:26px}.bar{height:100%;background:#5271ff;width:0;transition:.25s}
+.question{text-align:center;font-size:clamp(20px,3.5vw,28px);font-weight:700;line-height:1.35;margin:10px 0 25px}
+.formula{font-family:Cambria,"Times New Roman",serif;font-size:1.2em;white-space:nowrap}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+button{font:inherit}.answer{border:2px solid #dbe1ea;background:#fff;border-radius:15px;padding:17px 13px;cursor:pointer;font-weight:650;min-height:66px;transition:.15s}
+.answer:hover:not(:disabled){border-color:#5271ff;transform:translateY(-1px)}.answer:disabled{cursor:default}
+.answer.correct{background:#e9f8ee;border-color:#32a852}.answer.wrong{background:#fdecec;border-color:#d94a4a}
+.feedback{text-align:center;min-height:28px;margin:20px 0 4px;font-weight:800}
+.next,.restart{display:block;margin:15px auto 0;border:0;background:#172033;color:white;border-radius:13px;padding:13px 22px;cursor:pointer;font-weight:800}
+.hidden{display:none}.result{text-align:center}.result .big{font-size:54px;font-weight:900;margin:15px 0}
+@media(max-width:600px){.game{padding:20px}.answers{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<main class="game">
+ <section id="play">
+  <div class="top"><h1>Kemiallisten kaavojen peli</h1><div class="score">Pisteet: <span id="score">0</span></div></div>
+  <div class="progress"><div class="bar" id="bar"></div></div>
+  <div class="question" id="question"></div>
+  <div class="answers" id="answers"></div>
+  <div class="feedback" id="feedback"></div>
+  <button class="next hidden" id="next">Seuraava →</button>
+ </section>
+ <section id="result" class="result hidden">
+  <h1>Peli päättyi!</h1><div class="big"><span id="finalScore"></span> / 11</div>
+  <p id="resultText"></p><button class="restart" onclick="start()">Pelaa uudelleen</button>
+ </section>
+</main>
+<script>
+const compounds=[
+ {name:"glukoosissa", formula:"C₆H₁₂O₆", parts:[["hiiltä",6],["vetyä",12],["happea",6]]},
+ {name:"hiilidioksidissa", formula:"CO₂", parts:[["hiiltä",1],["happea",2]]},
+ {name:"hiilimonoksidissa", formula:"CO", parts:[["hiiltä",1],["happea",1]]},
+ {name:"vetyperoksidissa", formula:"H₂O₂", parts:[["vetyä",2],["happea",2]]},
+ {name:"vedessä", formula:"H₂O", parts:[["vetyä",2],["happea",1]]},
+ {name:"natriumkloridissa", formula:"NaCl", parts:[["natriumia",1],["klooria",1]]},
+ {name:"sitruunahapossa", formula:"C₆H₈O₇", parts:[["hiiltä",6],["vetyä",8],["happea",7]]},
+ {name:"kuparisulfaatissa", formula:"CuSO₄", parts:[["kuparia",1],["rikkiä",1],["happea",4]]},
+ {name:"dityppioksidissa", formula:"N₂O", parts:[["typpeä",2],["happea",1]]},
+ {name:"rauta(III)kloridissa", formula:"FeCl₃", parts:[["rautaa",1],["klooria",3]]},
+ {name:"magnesiumhydroksidissa", formula:"Mg(OH)₂", parts:[["magnesiumia",1],["happea",2],["vetyä",2]]}
+];
+let questions=[], index=0, score=0, answered=false;
+const shuffle=a=>[...a].sort(()=>Math.random()-.5);
+function fmt(parts){return parts.map(([n,c])=>`${c} ${n}`).join(", ")}
+function distractors(q){
+ const correct=fmt(q.parts), set=new Set([correct]);
+ while(set.size<4){
+   let p=q.parts.map(([n,c])=>[n,Math.max(1,c+(Math.floor(Math.random()*5)-2))]);
+   if(fmt(p)===correct){
+     const k=Math.floor(Math.random()*p.length); p[k]=[p[k][0],p[k][1]+1];
+   }
+   set.add(fmt(p));
+ }
+ return shuffle([...set]);
+}
+function start(){
+ questions=shuffle(compounds); index=0; score=0;
+ document.getElementById("score").textContent=0;
+ document.getElementById("play").classList.remove("hidden");
+ document.getElementById("result").classList.add("hidden");
+ show();
+}
+function show(){
+ answered=false;
+ const q=questions[index];
+ document.getElementById("bar").style.width=`${index/questions.length*100}%`;
+ document.getElementById("question").innerHTML=`Mitä alkuaineita ja kuinka monta on ${q.name} <span class="formula">${q.formula}</span>?`;
+ document.getElementById("feedback").textContent="";
+ document.getElementById("next").classList.add("hidden");
+ const box=document.getElementById("answers"); box.innerHTML="";
+ const correct=fmt(q.parts);
+ distractors(q).forEach(text=>{
+   const b=document.createElement("button"); b.className="answer"; b.textContent=text;
+   b.onclick=()=>answer(b,text===correct,correct); box.appendChild(b);
+ });
+}
+function answer(btn,isCorrect,correct){
+ if(answered)return; answered=true;
+ [...document.querySelectorAll(".answer")].forEach(b=>{
+   b.disabled=true; if(b.textContent===correct)b.classList.add("correct");
+ });
+ if(isCorrect){score++;document.getElementById("score").textContent=score;document.getElementById("feedback").textContent="Oikein! +1 piste";}
+ else{btn.classList.add("wrong");document.getElementById("feedback").textContent=`Väärin. Oikea vastaus: ${correct}.`;}
+ const next=document.getElementById("next"); next.textContent=index===questions.length-1?"Näytä tulos":"Seuraava →";next.classList.remove("hidden");
+}
+document.getElementById("next").onclick=()=>{
+ index++; if(index<questions.length)show(); else finish();
+};
+function finish(){
+ document.getElementById("play").classList.add("hidden");document.getElementById("result").classList.remove("hidden");
+ document.getElementById("finalScore").textContent=score;document.getElementById("bar").style.width="100%";
+ const pct=score/questions.length;
+ document.getElementById("resultText").textContent=pct===1?"Täydet pisteet!":pct>=.8?"Erinomaista!":pct>=.6?"Hyvin meni!":"Harjoittele vielä ja kokeile uudelleen.";
+}
+start();
+</script>
+</body>
+</html>
