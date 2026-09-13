@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kemian käsitteet – monivalintapeli</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#eef5f9;color:#17324d}
+.wrap{max-width:900px;margin:0 auto;padding:24px}
+h1{text-align:center;color:#07568f;margin:5px 0 20px}
+.card{background:#fff;border-radius:20px;padding:24px;box-shadow:0 8px 30px #0002}
+.top{display:flex;justify-content:space-between;gap:12px;font-weight:800;margin-bottom:20px}
+.q{font-size:1.5rem;font-weight:800;line-height:1.35;margin-bottom:20px}
+.answers{display:grid;gap:12px}
+button{font:inherit;font-weight:650;text-align:left;border:2px solid #3980b6;background:white;padding:15px;border-radius:13px;cursor:pointer}
+button:hover:not(:disabled){background:#edf7ff}
+button:disabled{cursor:default}
+.correct{background:#dcf7e4!important;border-color:#168344!important}
+.wrong{background:#ffe1e1!important;border-color:#d43131!important}
+.feedback{min-height:36px;margin-top:15px;font-size:1.08rem;font-weight:800}
+.next,.restart{display:none;background:#075f9d;color:#fff;border:0;text-align:center;width:100%;margin-top:8px}
+.note{text-align:center;margin-top:14px;color:#557085;font-size:.95rem}
+@media(max-width:600px){.wrap{padding:12px}.card{padding:17px}.q{font-size:1.25rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Kemian käsitteet</h1>
+<div class="card">
+  <div class="top"><span id="progress"></span><span id="score"></span></div>
+  <div class="q" id="question"></div>
+  <div class="answers" id="answers"></div>
+  <div class="feedback" id="feedback"></div>
+  <button class="next" id="next">Seuraava kysymys →</button>
+  <button class="restart" id="restart">Pelaa uudelleen</button>
+</div>
+<div class="note">Jokainen käsite kysytään kerran. Kysymysten ja vastausvaihtoehtojen järjestys arvotaan.</div>
+</div>
+
+<script>
+const data = [
+["Atomi","Aineen pienin rakenneosa, jota ei voida hajottaa kemiallisella reaktiolla pienemmiksi osiksi."],
+["Alkuaine","Puhdas aine, joka koostuu vain yhdenlaisista atomeista."],
+["Molekyyli","Kahden tai useamman toisiinsa sitoutuneen atomin muodostama rakenne."],
+["Yhdiste","Puhdas aine, jossa on vähintään kahta eri alkuainetta kemiallisesti sitoutuneena toisiinsa."],
+["Puhdasaine","Aine, joka koostuu vain yhdestä aineesta. Alkuaineet ja yhdisteet ovat puhtaita aineita."],
+["Seos","Aine, jossa on kahta tai useampaa eri ainetta sekoittuneena keskenään."],
+["Homogeeninen seos","Tasakoosteinen seos, jonka eri aineosia ei pysty erottamaan toisistaan silmällä."],
+["Heterogeeninen seos","Sekakoosteinen seos, jossa eri aineosat voidaan havaita tai koostumus ei ole kaikkialla samanlainen."],
+["Kapillaari-ilmiö","Ilmiö, jossa neste nousee tai laskee ohuessa putkessa tai huokoisessa materiaalissa nesteen ja pinnan välisten vuorovaikutusten vuoksi."],
+["Kylläinen liuos","Liuos, johon on tietyssä lämpötilassa liuennut niin paljon ainetta kuin siihen voi enintään liueta."],
+["Sulamispiste","Lämpötila, jossa aine muuttuu kiinteästä nesteeksi."],
+["Kiehumispiste","Lämpötila, jossa neste kiehuu ja muuttuu kaasuksi koko nesteessä."]
+];
+
+function shuffle(a){
+  a=[...a];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+let order=[], idx=0, points=0, locked=false;
+
+function start(){
+  order=shuffle(data.map((_,i)=>i));
+  idx=0; points=0;
+  document.getElementById("restart").style.display="none";
+  show();
+}
+
+function show(){
+  locked=false;
+  const current=order[idx];
+  const [term,definition]=data[current];
+  document.getElementById("progress").textContent=`Kysymys ${idx+1} / ${data.length}`;
+  document.getElementById("score").textContent=`Pisteet: ${points}`;
+  document.getElementById("question").textContent=`Määrittele, mitä tarkoittaa ${term.toLowerCase()}?`;
+  document.getElementById("feedback").textContent="";
+  document.getElementById("next").style.display="none";
+
+  let others=data.map((_,i)=>i).filter(i=>i!==current);
+  others=shuffle(others).slice(0,3);
+  let options=shuffle([current,...others]);
+  const box=document.getElementById("answers");
+  box.innerHTML="";
+  options.forEach(i=>{
+    const b=document.createElement("button");
+    b.textContent=data[i][1];
+    b.dataset.i=i;
+    b.onclick=()=>answer(b,i,current);
+    box.appendChild(b);
+  });
+}
+
+function answer(btn,chosen,correct){
+  if(locked)return;
+  locked=true;
+  const buttons=[...document.querySelectorAll("#answers button")];
+  buttons.forEach(b=>b.disabled=true);
+  if(chosen===correct){
+    points++;
+    btn.classList.add("correct");
+    document.getElementById("feedback").textContent="✓ Oikein! Sait yhden pisteen.";
+  } else {
+    btn.classList.add("wrong");
+    buttons.find(b=>Number(b.dataset.i)===correct).classList.add("correct");
+    document.getElementById("feedback").textContent="✗ Väärin. Oikea määritelmä on merkitty vihreällä.";
+  }
+  document.getElementById("score").textContent=`Pisteet: ${points}`;
+  const next=document.getElementById("next");
+  next.style.display="block";
+  next.textContent=idx===data.length-1 ? "Näytä tulos" : "Seuraava kysymys →";
+}
+
+document.getElementById("next").onclick=()=>{
+  idx++;
+  if(idx<data.length){show(); return;}
+  document.getElementById("progress").textContent="Valmis";
+  document.getElementById("question").textContent="Peli päättyi!";
+  document.getElementById("answers").innerHTML="";
+  document.getElementById("feedback").textContent=`Sait ${points} / ${data.length} pistettä.`;
+  document.getElementById("next").style.display="none";
+  document.getElementById("restart").style.display="block";
+};
+document.getElementById("restart").onclick=start;
+start();
+</script>
+</body>
+</html>
