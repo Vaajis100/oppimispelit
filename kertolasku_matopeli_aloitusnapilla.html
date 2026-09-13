@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Kertolaskumatopeli</title>
+<style>
+:root{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  color:#172033;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  background:#f2f6fb;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding:6px 12px;
+  overflow-x:hidden;
+}
+.wrap{
+  width:min(760px,100%);
+  text-align:center;
+}
+h1{
+  margin:0 0 4px;
+  font-size:clamp(20px,3.2vh,30px);
+}
+.info{
+  display:flex;
+  justify-content:center;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-bottom:5px;
+}
+.badge{
+  background:#fff;
+  padding:5px 12px;
+  border-radius:14px;
+  box-shadow:0 4px 15px #0001;
+  font-weight:800;
+}
+.problem{
+  background:white;
+  border-radius:18px;
+  padding:6px 16px;
+  margin:0 auto 6px;
+  box-shadow:0 5px 18px #0001;
+  font-size:clamp(25px,4.5vh,38px);
+  font-weight:900;
+  min-height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.gamebox{
+  width:min(88vw,70vh,560px);
+  aspect-ratio:1/1;
+  margin:0 auto;
+  position:relative;
+  border-radius:10px;
+  overflow:hidden;
+  background:#fff;
+  box-shadow:0 8px 30px #0002;
+}
+canvas{
+  width:100%;
+  height:100%;
+  display:block;
+  background:#fdfdfd;
+  touch-action:none;
+}
+.message{
+  min-height:22px;
+  margin:4px 0 0;
+  font-weight:800;
+  font-size:18px;
+}
+.controls{
+  margin:4px auto 0;
+  width:174px;
+  display:grid;
+  grid-template-columns:repeat(3,52px);
+  grid-template-rows:repeat(2,44px);
+  gap:6px;
+  justify-content:center;
+}
+.ctrl{
+  border:0;
+  border-radius:16px;
+  background:#26334d;
+  color:white;
+  font-size:22px;
+  font-weight:900;
+  box-shadow:0 4px 10px #0002;
+  touch-action:manipulation;
+}
+.ctrl:active{transform:scale(.96)}
+.up{grid-column:2;grid-row:1}
+.left{grid-column:1;grid-row:2}
+.down{grid-column:2;grid-row:2}
+.right{grid-column:3;grid-row:2}
+.restart{
+  margin-top:12px;
+  border:0;
+  border-radius:14px;
+  padding:12px 20px;
+  background:#5271ff;
+  color:white;
+  font-weight:800;
+  font-size:16px;
+  cursor:pointer;
+}
+.overlay{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  background:#ffffffdd;
+  padding:24px;
+}
+.overlay.hidden{display:none}
+.overlay h2{font-size:38px;margin:0 0 8px}
+.overlay p{font-size:20px;margin:0 0 16px}
+.small{
+  margin-top:3px;
+  font-size:14px;
+  color:#5f6878;
+}
+@media (max-width:600px){
+  body{padding:4px 8px}
+  .gamebox{width:min(94vw,65vh,520px)}
+  .controls{width:162px;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,42px)}
+  .small{font-size:12px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Kertolaskumatopeli</h1>
+  <div class="info">
+    <div class="badge">Pisteet: <span id="score">0</span></div>
+    <div class="badge">Haavat: <span id="wounds">0</span> / 3</div>
+  </div>
+
+  <div class="problem" id="problem">6 · 7 = ?</div>
+
+  <div class="gamebox">
+    <canvas id="game" width="600" height="600"></canvas>
+    <div id="overlay" class="overlay">
+      <h2 id="overlayTitle">Kertolaskumatopeli</h2>
+      <p id="finalText">Kun olet valmis, paina Aloita peli.</p>
+      <button class="restart" id="overlayButton" onclick="startFromOverlay()">Aloita peli</button>
+    </div>
+  </div>
+
+  <div class="message" id="message"></div>
+
+  <div class="controls" aria-label="Kosketusohjaimet">
+    <button class="ctrl up" data-dir="up">▲</button>
+    <button class="ctrl left" data-dir="left">◀</button>
+    <button class="ctrl down" data-dir="down">▼</button>
+    <button class="ctrl right" data-dir="right">▶</button>
+  </div>
+
+  <div class="small">Ohjaa nuolinäppäimillä tai kosketusnäytön painikkeilla. Voit myös pyyhkäistä pelikentällä.</div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
+const woundsEl = document.getElementById("wounds");
+const problemEl = document.getElementById("problem");
+const messageEl = document.getElementById("message");
+const overlay = document.getElementById("overlay");
+const finalText = document.getElementById("finalText");
+const overlayTitle = document.getElementById("overlayTitle");
+const overlayButton = document.getElementById("overlayButton");
+
+const W = canvas.width, H = canvas.height;
+const CELL = 20;
+const COLS = W / CELL;
+const ROWS = H / CELL;
+const TICK = 120;
+
+let snake, dir, nextDir, answers, correctAnswer, score, wounds, running, timer;
+let touchStart = null;
+
+function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+function newProblem(){
+  const a = randInt(2,10);
+  const b = randInt(2,10);
+  correctAnswer = a*b;
+  problemEl.textContent = `${a} · ${b} = ?`;
+
+  const vals = new Set([correctAnswer]);
+  while(vals.size < 5){
+    let delta = randInt(-12,12);
+    if(delta===0) delta=randInt(1,6);
+    let v = correctAnswer + delta;
+    if(v > 0) vals.add(v);
+  }
+
+  const arr = [...vals].sort(()=>Math.random()-.5);
+  answers = [];
+
+  for(const value of arr){
+    let placed = false;
+    for(let tries=0; tries<300 && !placed; tries++){
+      const x = randInt(2,COLS-3);
+      const y = randInt(2,ROWS-3);
+      const tooCloseSnake = snake.some(s => Math.hypot(s.x-x,s.y-y) < 4);
+      const tooCloseAnswer = answers.some(a => Math.hypot(a.x-x,a.y-y) < 5);
+      if(!tooCloseSnake && !tooCloseAnswer){
+        answers.push({x,y,value});
+        placed = true;
+      }
+    }
+  }
+}
+
+function resetSnake(){
+  snake = [
+    {x:14,y:15},
+    {x:13,y:15},
+    {x:12,y:15},
+    {x:11,y:15}
+  ];
+  dir = {x:1,y:0};
+  nextDir = {x:1,y:0};
+}
+
+function restartGame(){
+  clearInterval(timer);
+  score = 0;
+  wounds = 0;
+  running = true;
+  scoreEl.textContent = score;
+  woundsEl.textContent = wounds;
+  messageEl.textContent = "";
+  overlay.classList.add("hidden");
+  resetSnake();
+  newProblem();
+  draw();
+  timer = setInterval(step,TICK);
+}
+
+function startFromOverlay(){
+  restartGame();
+}
+
+function setDirection(name){
+  if(!running) return;
+  let d;
+  if(name==="up") d={x:0,y:-1};
+  if(name==="down") d={x:0,y:1};
+  if(name==="left") d={x:-1,y:0};
+  if(name==="right") d={x:1,y:0};
+  if(!d) return;
+  if(d.x === -dir.x && d.y === -dir.y) return;
+  nextDir = d;
+}
+
+function step(){
+  if(!running) return;
+  dir = nextDir;
+  const head = {x:snake[0].x + dir.x, y:snake[0].y + dir.y};
+
+  if(head.x < 0 || head.y < 0 || head.x >= COLS || head.y >= ROWS){
+    endGame("Mato osui kentän reunaan.");
+    return;
+  }
+
+  if(snake.some((s,i)=>i>0 && s.x===head.x && s.y===head.y)){
+    endGame("Mato osui itseensä.");
+    return;
+  }
+
+  snake.unshift(head);
+
+  let ate = false;
+  const hitIndex = answers.findIndex(a => a.x===head.x && a.y===head.y);
+  if(hitIndex !== -1){
+    const hit = answers[hitIndex];
+    if(hit.value === correctAnswer){
+      score++;
+      scoreEl.textContent = score;
+      messageEl.textContent = "Oikein! +1 piste";
+      ate = true; // tail is not removed -> snake grows
+      newProblem();
+    }else{
+      wounds++;
+      woundsEl.textContent = wounds;
+      messageEl.textContent = `Väärin! Haava ${wounds}/3`;
+      if(wounds >= 3){
+        draw();
+        setTimeout(()=>endGame("Mato sai kolme haavaa."),120);
+        return;
+      }
+      newProblem();
+    }
+  }
+
+  if(!ate) snake.pop();
+  draw();
+}
+
+function endGame(reason){
+  running=false;
+  clearInterval(timer);
+  draw();
+  overlayTitle.textContent = "Peli päättyi";
+  finalText.textContent = `${reason} Pisteesi: ${score}`;
+  overlayButton.textContent = "Pelaa uudelleen";
+  overlay.classList.remove("hidden");
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  // subtle grid
+  ctx.strokeStyle="#edf0f4";
+  ctx.lineWidth=1;
+  for(let x=0;x<=W;x+=CELL){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<=H;y+=CELL){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // border
+  ctx.strokeStyle="#26334d";
+  ctx.lineWidth=8;
+  ctx.strokeRect(4,4,W-8,H-8);
+
+  // answers
+  for(const a of answers){
+    const cx = a.x*CELL + CELL/2;
+    const cy = a.y*CELL + CELL/2;
+    ctx.beginPath();
+    ctx.arc(cx,cy,17,0,Math.PI*2);
+    ctx.fillStyle="#ffd45a";
+    ctx.fill();
+    ctx.strokeStyle="#d2a51f";
+    ctx.lineWidth=2;
+    ctx.stroke();
+
+    ctx.fillStyle="#172033";
+    ctx.font="bold 17px system-ui";
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.fillText(String(a.value),cx,cy+1);
+  }
+
+  // snake
+  snake.forEach((s,i)=>{
+    const px=s.x*CELL, py=s.y*CELL;
+    ctx.fillStyle = i===0 ? "#278f4b" : "#45b86b";
+    ctx.fillRect(px+2,py+2,CELL-4,CELL-4);
+    ctx.strokeStyle="#1f7b40";
+    ctx.lineWidth=1;
+    ctx.strokeRect(px+2,py+2,CELL-4,CELL-4);
+
+    if(i===0){
+      ctx.fillStyle="#fff";
+      const ex1 = px + (dir.x===0 ? 6 : dir.x>0 ? 14 : 5);
+      const ex2 = px + (dir.x===0 ? 14 : dir.x>0 ? 14 : 5);
+      const ey1 = py + (dir.y===0 ? 6 : dir.y>0 ? 14 : 5);
+      const ey2 = py + (dir.y===0 ? 14 : dir.y>0 ? 14 : 5);
+      ctx.beginPath();ctx.arc(ex1,ey1,2.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(ex2,ey2,2.5,0,Math.PI*2);ctx.fill();
+    }
+  });
+
+  // wounds visual markers on snake
+  for(let i=0;i<wounds;i++){
+    const seg = snake[Math.min(2+i*2, snake.length-1)];
+    if(!seg) continue;
+    const cx=seg.x*CELL+CELL/2, cy=seg.y*CELL+CELL/2;
+    ctx.strokeStyle="#c92a2a";
+    ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(cx-5,cy-5);ctx.lineTo(cx+5,cy+5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx+5,cy-5);ctx.lineTo(cx-5,cy+5);ctx.stroke();
+  }
+}
+
+document.addEventListener("keydown",e=>{
+  const keyMap={ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right"};
+  if(keyMap[e.key]){
+    e.preventDefault();
+    setDirection(keyMap[e.key]);
+  }
+});
+
+document.querySelectorAll(".ctrl").forEach(btn=>{
+  const go=()=>setDirection(btn.dataset.dir);
+  btn.addEventListener("pointerdown",e=>{e.preventDefault();go();});
+});
+
+canvas.addEventListener("touchstart",e=>{
+  const t=e.touches[0];
+  touchStart={x:t.clientX,y:t.clientY};
+},{passive:true});
+
+canvas.addEventListener("touchend",e=>{
+  if(!touchStart) return;
+  const t=e.changedTouches[0];
+  const dx=t.clientX-touchStart.x, dy=t.clientY-touchStart.y;
+  if(Math.max(Math.abs(dx),Math.abs(dy))>20){
+    if(Math.abs(dx)>Math.abs(dy)) setDirection(dx>0?"right":"left");
+    else setDirection(dy>0?"down":"up");
+  }
+  touchStart=null;
+},{passive:true});
+
+score = 0;
+wounds = 0;
+running = false;
+scoreEl.textContent = score;
+woundsEl.textContent = wounds;
+resetSnake();
+newProblem();
+draw();
+overlayTitle.textContent = "Kertolaskumatopeli";
+finalText.textContent = "Kun olet valmis, paina Aloita peli.";
+overlayButton.textContent = "Aloita peli";
+overlay.classList.remove("hidden");
+</script>
+</body>
+</html>
