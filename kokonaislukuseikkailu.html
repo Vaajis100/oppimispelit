@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Kokonaislukuseikkailu</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #101522;
+    font-family: Arial, Helvetica, sans-serif;
+    overflow: hidden;
+    touch-action: none;
+  }
+  #wrap {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: stretch;
+  }
+  #hud {
+    height: 56px;
+    background: #172033;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    font-weight: 700;
+    font-size: 18px;
+    border-bottom: 3px solid #26344f;
+    z-index: 2;
+  }
+  #game {
+    flex: 1;
+    display: block;
+    width: 100%;
+    height: calc(100vh - 56px);
+    background: #73c9ff;
+  }
+
+  #overlay, #questionOverlay, #endOverlay {
+    position: fixed;
+    inset: 56px 0 0 0;
+    background: rgba(10,14,24,.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  #questionOverlay, #endOverlay { display: none; }
+
+  .panel {
+    background: #fffaf0;
+    border: 5px solid #3b2b20;
+    border-radius: 18px;
+    padding: 24px;
+    width: min(520px, 90vw);
+    box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    text-align: center;
+  }
+  .panel h1 { margin-top: 0; font-size: 34px; }
+  .panel p { font-size: 18px; line-height: 1.45; }
+  .bigBtn {
+    border: 0;
+    border-radius: 14px;
+    padding: 14px 26px;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    background: #f0a900;
+    color: #1f1b12;
+    box-shadow: 0 5px 0 #a76f00;
+  }
+  .bigBtn:active { transform: translateY(3px); box-shadow: 0 2px 0 #a76f00; }
+
+  #questionText {
+    font-size: 40px;
+    font-weight: 800;
+    margin: 8px 0 18px;
+  }
+  #answerInput {
+    width: 180px;
+    font-size: 32px;
+    text-align: center;
+    padding: 10px;
+    border-radius: 10px;
+    border: 3px solid #333;
+  }
+  #feedback {
+    min-height: 30px;
+    font-size: 20px;
+    font-weight: 700;
+    margin-top: 12px;
+  }
+
+  #touchControls {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 16px;
+    pointer-events: none;
+    z-index: 6;
+  }
+  .touchGroup {
+    display: flex;
+    gap: 10px;
+    pointer-events: auto;
+  }
+  .touchBtn {
+    width: 66px;
+    height: 66px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,.7);
+    background: rgba(20,25,35,.48);
+    color: white;
+    font-size: 28px;
+    font-weight: 800;
+    display: grid;
+    place-items: center;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  @media (hover:hover) and (pointer:fine) {
+    #touchControls { opacity: .32; }
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud">
+    <div>Pisteet: <span id="score">0</span>/50</div>
+    <div>Taso: <span id="level">1</span>/5</div>
+    <div>Haavat: <span id="lives">❤❤❤</span></div>
+  </div>
+  <canvas id="game"></canvas>
+</div>
+
+<div id="overlay">
+  <div class="panel">
+    <h1>Kokonaislukuseikkailu</h1>
+    <p>
+      Liiku nuolinäppäimillä tai A/D. Hyppää vain ↑-nuolella.
+      Ammu välilyönnillä. Osu kysymyslaatikkoon hypäten tai törmäämällä siihen.
+    </p>
+    <p>
+      Oikeasta kertolaskuvastauksesta saat pisteen. Väärästä vastauksesta saat haavan.
+      Kolmesta haavasta peli päättyy. Jokainen 10 pistettä vie seuraavalle tasolle.
+    </p>
+    <button class="bigBtn" id="startBtn">Aloita peli</button>
+  </div>
+</div>
+
+<div id="questionOverlay">
+  <div class="panel">
+    <div style="font-size:20px;font-weight:700;">Ratkaise kertolasku</div>
+    <div id="questionText">-4 · 7 = ?</div>
+    <input id="answerInput" inputmode="numeric" autocomplete="off" />
+    <div style="margin-top:14px;">
+      <button class="bigBtn" id="answerBtn">Vastaa</button>
+    </div>
+    <div id="feedback"></div>
+  </div>
+</div>
+
+<div id="endOverlay">
+  <div class="panel">
+    <h1 id="endTitle">Peli päättyi</h1>
+    <p id="endText"></p>
+    <button class="bigBtn" id="restartBtn">Pelaa uudelleen</button>
+  </div>
+</div>
+
+<div id="touchControls">
+  <div class="touchGroup">
+    <div class="touchBtn" data-key="left">◀</div>
+    <div class="touchBtn" data-key="right">▶</div>
+  </div>
+  <div class="touchGroup">
+    <div class="touchBtn" data-key="jump">▲</div>
+    <div class="touchBtn" data-key="shoot">●</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  const scoreEl = document.getElementById('score');
+  const levelEl = document.getElementById('level');
+  const livesEl = document.getElementById('lives');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('startBtn');
+  const questionOverlay = document.getElementById('questionOverlay');
+  const questionText = document.getElementById('questionText');
+  const answerInput = document.getElementById('answerInput');
+  const answerBtn = document.getElementById('answerBtn');
+  const feedback = document.getElementById('feedback');
+  const endOverlay = document.getElementById('endOverlay');
+  const endTitle = document.getElementById('endTitle');
+  const endText = document.getElementById('endText');
+  const restartBtn = document.getElementById('restartBtn');
+
+  let W = 960, H = 540, groundY = 460;
+  function resize() {
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    W = rect.width;
+    H = rect.height;
+    groundY = H - Math.max(80, H * 0.16);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const keys = { left:false, right:false, jump:false, shoot:false };
+  let running = false, pausedForQuestion = false, gameOver = false;
+  let score = 0, level = 1, wounds = 0;
+  let cameraX = 0, worldX = 0;
+  let currentAnswer = 0, currentBlock = null;
+  let lastTime = 0, enemyTimer = 0, blockTimer = 0, shotCooldown = 0;
+
+  const player = {
+    x: 160, y: 0, w: 40, h: 56,
+    vx: 0, vy: 0,
+    speed: 290,
+    jump: 650,
+    grounded: false,
+    facing: 1,
+    invuln: 0
+  };
+
+  let enemies = [];
+  let bullets = [];
+  let blocks = [];
+  let particles = [];
+  let clouds = [];
+
+  function resetClouds() {
+    clouds = [];
+    for (let i=0;i<9;i++) {
+      clouds.push({ x:i*250 + Math.random()*150, y:40+Math.random()*130, s:.7+Math.random()*.9 });
+    }
+  }
+
+  function resetGame() {
+    score = 0;
+    level = 1;
+    wounds = 0;
+    worldX = 0;
+    cameraX = 0;
+    player.x = 160;
+    player.y = groundY - player.h;
+    player.vx = player.vy = 0;
+    player.invuln = 0;
+    enemies = [];
+    bullets = [];
+    blocks = [];
+    particles = [];
+    enemyTimer = 0.7;
+    blockTimer = 1.7;
+    gameOver = false;
+    pausedForQuestion = false;
+    feedback.textContent = "";
+    updateHud();
+    resetClouds();
+  }
+
+  function updateHud() {
+    scoreEl.textContent = score;
+    levelEl.textContent = level;
+    livesEl.textContent = '❤'.repeat(3-wounds) + '♡'.repeat(wounds);
+  }
+
+  function startGame() {
+    resetGame();
+    overlay.style.display = 'none';
+    endOverlay.style.display = 'none';
+    running = true;
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+  }
+
+  function endGame(win=false) {
+    running = false;
+    gameOver = true;
+    endOverlay.style.display = 'flex';
+    if (win) {
+      endTitle.textContent = 'Mahtavaa!';
+      endText.textContent = `Läpäisit kaikki 5 tasoa ja sait täydet ${score}/50 pistettä!`;
+    } else {
+      endTitle.textContent = 'Peli päättyi';
+      endText.textContent = `Sait ${score}/50 pistettä ja pääsit tasolle ${level}.`;
+    }
+  }
+
+  startBtn.addEventListener('click', startGame);
+  restartBtn.addEventListener('click', startGame);
+
+  function normKeyDown(e, val) {
+    if (["ArrowLeft","a","A"].includes(e.key)) keys.left = val;
+    if (["ArrowRight","d","D"].includes(e.key)) keys.right = val;
+    if (e.key === "ArrowUp") keys.jump = val;
+    if (e.key === " ") keys.shoot = val;
+  }
+  window.addEventListener('keydown', e => {
+    if (pausedForQuestion && e.key === 'Enter') {
+      submitAnswer();
+      return;
+    }
+    normKeyDown(e, true);
+    if (["ArrowLeft","ArrowRight","ArrowUp"," "].includes(e.key)) e.preventDefault();
+  });
+  window.addEventListener('keyup', e => normKeyDown(e, false));
+
+  document.querySelectorAll('.touchBtn').forEach(btn => {
+    const k = btn.dataset.key;
+    const on = (e) => { e.preventDefault(); keys[k] = true; };
+    const off = (e) => { e.preventDefault(); keys[k] = false; };
+    btn.addEventListener('pointerdown', on);
+    btn.addEventListener('pointerup', off);
+    btn.addEventListener('pointercancel', off);
+    btn.addEventListener('pointerleave', off);
+  });
+
+  answerBtn.addEventListener('click', submitAnswer);
+
+  function randInt(a,b) { return Math.floor(Math.random()*(b-a+1))+a; }
+
+  function askQuestion(block) {
+    pausedForQuestion = true;
+    currentBlock = block;
+    let a = randInt(-10,10);
+    let b = randInt(-10,10);
+    currentAnswer = a*b;
+    const aText = String(a);
+    const bText = b < 0 ? `(${b})` : String(b);
+    questionText.textContent = `${aText} · ${bText} = ?`;
+    answerInput.value = '';
+    feedback.textContent = '';
+    questionOverlay.style.display = 'flex';
+    setTimeout(()=>answerInput.focus(), 50);
+  }
+
+  function submitAnswer() {
+    if (!pausedForQuestion) return;
+    const val = Number(answerInput.value.trim().replace(',', '.'));
+    if (answerInput.value.trim() === '' || Number.isNaN(val)) {
+      feedback.textContent = 'Kirjoita vastaus.';
+      return;
+    }
+
+    if (val === currentAnswer) {
+      score++;
+      feedback.textContent = 'Oikein! +1 piste';
+      if (currentBlock) currentBlock.used = true;
+      updateHud();
+
+      const newLevel = Math.min(5, Math.floor(score / 10) + 1);
+      if (score === 50) {
+        setTimeout(() => {
+          questionOverlay.style.display = 'none';
+          pausedForQuestion = false;
+          endGame(true);
+        }, 650);
+        return;
+      }
+      if (newLevel > level) {
+        level = newLevel;
+        enemies = [];
+        bullets = [];
+        blocks = [];
+        worldX = 0;
+        cameraX = 0;
+        player.x = 160;
+        player.y = groundY - player.h;
+        updateHud();
+      }
+    } else {
+      takeWound(true);
+      feedback.textContent = `Väärin. Oikea vastaus oli ${currentAnswer}.`;
+      if (currentBlock) currentBlock.used = true;
+    }
+
+    setTimeout(() => {
+      questionOverlay.style.display = 'none';
+      pausedForQuestion = false;
+      currentBlock = null;
+      if (!gameOver) {
+        lastTime = performance.now();
+        requestAnimationFrame(loop);
+      }
+    }, 900);
+  }
+
+  function takeWound(fromQuestion=false) {
+    if (gameOver) return;
+    if (!fromQuestion && player.invuln > 0) return;
+    wounds++;
+    player.invuln = 1.7;
+    updateHud();
+    if (wounds >= 3) {
+      questionOverlay.style.display = 'none';
+      pausedForQuestion = false;
+      endGame(false);
+    }
+  }
+
+  function shoot() {
+    if (shotCooldown > 0) return;
+    shotCooldown = .33;
+    bullets.push({
+      x: player.x + (player.facing>0 ? player.w : -12),
+      y: player.y + 23,
+      vx: player.facing * 700,
+      r: 6
+    });
+  }
+
+  function spawnEnemy() {
+    enemies.push({
+      x: W + cameraX + 80,
+      y: groundY - 36,
+      w: 38, h: 36,
+      vx: -(70 + level*15 + Math.random()*35),
+      alive:true
+    });
+  }
+
+  function spawnBlock() {
+    blocks.push({
+      x: W + cameraX + 120,
+      y: groundY - (100 + Math.random()*85),
+      w: 52, h: 52,
+      used:false,
+      bob: Math.random()*Math.PI*2
+    });
+  }
+
+  function rects(a,b) {
+    return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+  }
+
+  function burst(x,y, n=8) {
+    for (let i=0;i<n;i++) {
+      particles.push({
+        x,y, vx:(Math.random()-.5)*220, vy:-Math.random()*220-50,
+        life:.5+Math.random()*.35, r:2+Math.random()*4
+      });
+    }
+  }
+
+  function update(dt) {
+    if (pausedForQuestion || gameOver) return;
+
+    if (player.invuln > 0) player.invuln -= dt;
+    if (shotCooldown > 0) shotCooldown -= dt;
+
+    const autoForward = 95 + level*8;
+    let move = autoForward;
+    if (keys.left) move -= player.speed;
+    if (keys.right) move += player.speed;
+
+    player.vx = move;
+    if (player.vx < -120) player.vx = -120;
+    player.facing = player.vx >= 0 ? 1 : -1;
+
+    if (keys.jump && player.grounded) {
+      player.vy = -player.jump;
+      player.grounded = false;
+    }
+    if (keys.shoot) shoot();
+
+    player.vy += 1500*dt;
+    player.x += player.vx*dt;
+    player.y += player.vy*dt;
+
+    const maxScreenX = W*0.43;
+    if (player.x - cameraX > maxScreenX) {
+      cameraX = player.x - maxScreenX;
+    }
+    if (player.y + player.h >= groundY) {
+      player.y = groundY - player.h;
+      player.vy = 0;
+      player.grounded = true;
+    }
+
+    worldX = cameraX;
+
+    enemyTimer -= dt;
+    blockTimer -= dt;
+    if (enemyTimer <= 0) {
+      spawnEnemy();
+      enemyTimer = Math.max(.8, 1.5 - level*.08) + Math.random()*1.0;
+    }
+    if (blockTimer <= 0) {
+      spawnBlock();
+      blockTimer = 3.0 + Math.random()*2.0;
+    }
+
+    for (const e of enemies) e.x += e.vx*dt;
+    for (const b of bullets) b.x += b.vx*dt;
+
+    for (const p of particles) {
+      p.x += p.vx*dt;
+      p.y += p.vy*dt;
+      p.vy += 800*dt;
+      p.life -= dt;
+    }
+
+    for (const b of bullets) {
+      for (const e of enemies) {
+        if (!e.alive) continue;
+        const br = {x:b.x-b.r,y:b.y-b.r,w:b.r*2,h:b.r*2};
+        if (rects(br,e)) {
+          e.alive = false;
+          b.dead = true;
+          burst(e.x+e.w/2,e.y+e.h/2,10);
+        }
+      }
+    }
+
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      if (rects(player,e)) {
+        takeWound(false);
+        e.alive = false;
+        burst(e.x+e.w/2,e.y+e.h/2,12);
+        player.vy = -300;
+      }
+    }
+
+    for (const block of blocks) {
+      if (block.used) continue;
+      if (rects(player, block)) {
+        block.used = true;
+        askQuestion(block);
+        return;
+      }
+    }
+
+    bullets = bullets.filter(b => !b.dead && Math.abs(b.x - cameraX) < W*1.7);
+    enemies = enemies.filter(e => e.alive && e.x > cameraX - 120);
+    blocks = blocks.filter(b => b.x > cameraX - 160);
+    particles = particles.filter(p => p.life > 0);
+  }
+
+  function drawCloud(x,y,s) {
+    ctx.save();
+    ctx.globalAlpha = .92;
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(x,y,24*s,0,Math.PI*2);
+    ctx.arc(x+25*s,y-10*s,30*s,0,Math.PI*2);
+    ctx.arc(x+54*s,y,23*s,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBackground() {
+    let sky;
+    if (level === 1) sky = '#73c9ff';
+    if (level === 2) sky = '#8bd1a6';
+    if (level === 3) sky = '#d7a3ff';
+    if (level === 4) sky = '#f6b36b';
+    if (level === 5) sky = '#52607d';
+    ctx.fillStyle = sky;
+    ctx.fillRect(0,0,W,H);
+
+    for (const c of clouds) {
+      const sx = c.x - cameraX*.16;
+      const wrapped = ((sx % (W+250)) + (W+250)) % (W+250) - 100;
+      drawCloud(wrapped,c.y,c.s);
+    }
+
+    // hills
+    ctx.fillStyle = level === 5 ? '#303b48' : '#5aae61';
+    for (let i=-2;i<8;i++) {
+      const x = i*260 - (cameraX*.35 % 260);
+      ctx.beginPath();
+      ctx.arc(x+130, groundY+35, 155, Math.PI, Math.PI*2);
+      ctx.fill();
+    }
+
+    // ground
+    ctx.fillStyle = level === 4 ? '#7f4c2a' : level === 5 ? '#283038' : '#7b4e2c';
+    ctx.fillRect(0,groundY,W,H-groundY);
+    ctx.fillStyle = level === 4 ? '#e0bd58' : level === 5 ? '#56616b' : '#59b34c';
+    ctx.fillRect(0,groundY,W,16);
+  }
+
+  function drawPlayer() {
+    const sx = player.x - cameraX;
+    const sy = player.y;
+    ctx.save();
+
+    if (player.invuln > 0 && Math.floor(player.invuln*12)%2===0) ctx.globalAlpha = .35;
+
+    // generic plumber-like hero, original colors/shape
+    ctx.translate(sx + player.w/2, sy + player.h/2);
+    if (player.facing < 0) ctx.scale(-1,1);
+    ctx.translate(-player.w/2, -player.h/2);
+
+    // legs
+    ctx.fillStyle = '#24324f';
+    ctx.fillRect(7,38,10,16);
+    ctx.fillRect(23,38,10,16);
+
+    // body
+    ctx.fillStyle = '#22a06b';
+    ctx.fillRect(7,20,26,24);
+
+    // overalls
+    ctx.fillStyle = '#3559b7';
+    ctx.fillRect(11,27,18,18);
+
+    // head
+    ctx.fillStyle = '#f0b27a';
+    ctx.fillRect(10,7,21,17);
+
+    // cap
+    ctx.fillStyle = '#7a3dc1';
+    ctx.fillRect(7,3,24,8);
+    ctx.fillRect(23,0,10,6);
+
+    // nose
+    ctx.fillStyle = '#e69a61';
+    ctx.fillRect(28,12,8,7);
+
+    // eye
+    ctx.fillStyle = '#171717';
+    ctx.fillRect(25,10,3,4);
+
+    // arm + blaster
+    ctx.fillStyle = '#f0b27a';
+    ctx.fillRect(29,25,8,7);
+    ctx.fillStyle = '#263238';
+    ctx.fillRect(34,26,10,5);
+
+    ctx.restore();
+  }
+
+  function drawEnemy(e) {
+    const x = e.x - cameraX, y = e.y;
+    ctx.save();
+    ctx.fillStyle = '#8f4929';
+    ctx.beginPath();
+    ctx.arc(x+e.w/2,y+13,18,Math.PI,0);
+    ctx.lineTo(x+e.w-2,y+22);
+    ctx.lineTo(x+2,y+22);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#f4e0b9';
+    ctx.fillRect(x+8,y+18,22,16);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(x+11,y+23,4,5);
+    ctx.fillRect(x+23,y+23,4,5);
+    ctx.fillStyle = '#6d351f';
+    ctx.fillRect(x+7,y+33,10,4);
+    ctx.fillRect(x+21,y+33,10,4);
+    ctx.restore();
+  }
+
+  function drawBlock(b) {
+    const x = b.x-cameraX, y = b.y + Math.sin(performance.now()/300+b.bob)*4;
+    ctx.save();
+    ctx.fillStyle = b.used ? '#90816c' : '#f6bf2f';
+    ctx.fillRect(x,y,b.w,b.h);
+    ctx.strokeStyle = '#7b5320';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(x,y,b.w,b.h);
+    ctx.fillStyle = b.used ? '#665a4b' : '#fff7c0';
+    ctx.font = 'bold 34px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(b.used ? '✓' : '?', x+b.w/2, y+b.h/2+2);
+    ctx.restore();
+  }
+
+  function drawBullet(b) {
+    ctx.fillStyle = '#fff176';
+    ctx.beginPath();
+    ctx.arc(b.x-cameraX,b.y,b.r,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#ff8f00';
+    ctx.beginPath();
+    ctx.arc(b.x-cameraX,b.y,b.r/2,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  function drawParticles() {
+    ctx.fillStyle = '#ffd45b';
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0,p.life);
+      ctx.beginPath();
+      ctx.arc(p.x-cameraX,p.y,p.r,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawLevelBanner() {
+    ctx.save();
+    ctx.globalAlpha = .12;
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 90px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`TASO ${level}`, W/2, 120);
+    ctx.restore();
+  }
+
+  function draw() {
+    drawBackground();
+    drawLevelBanner();
+
+    for (const b of blocks) {
+      const sx = b.x-cameraX;
+      if (sx>-80 && sx<W+80) drawBlock(b);
+    }
+    for (const e of enemies) {
+      const sx = e.x-cameraX;
+      if (sx>-80 && sx<W+80) drawEnemy(e);
+    }
+    for (const b of bullets) drawBullet(b);
+    drawPlayer();
+    drawParticles();
+  }
+
+  function loop(t) {
+    if (!running || pausedForQuestion || gameOver) return;
+    const dt = Math.min(.033, (t-lastTime)/1000 || 0);
+    lastTime = t;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Show initial still frame
+  resetGame();
+  draw();
+})();
+</script>
+</body>
+</html>
