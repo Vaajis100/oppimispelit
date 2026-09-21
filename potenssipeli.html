@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Potenssipeli</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,sans-serif;background:#eef4fb;color:#172033}
+  .wrap{max-width:900px;margin:24px auto;padding:18px}
+  .card{background:#fff;border-radius:18px;box-shadow:0 8px 28px rgba(0,0,0,.10);padding:24px}
+  h1{text-align:center;margin:0 0 8px;color:#1756a9}
+  .sub{text-align:center;margin-bottom:20px;color:#526070}
+  .top{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+  .badge{background:#e8f1ff;border-radius:999px;padding:9px 16px;font-weight:bold}
+  .task{display:grid;grid-template-columns:70px 1fr 130px 72px;align-items:center;gap:12px;padding:11px 8px;border-bottom:1px solid #e5eaf0}
+  .task:last-child{border-bottom:none}
+  .num{font-weight:bold;color:#6b7480}
+  .expr{font-size:1.35rem;font-weight:bold}
+  input{width:100%;font-size:1.05rem;padding:9px 10px;border:2px solid #cfd8e3;border-radius:9px;text-align:center}
+  input:focus{outline:none;border-color:#4389df}
+  button{border:0;border-radius:9px;padding:10px 13px;font-weight:bold;cursor:pointer;background:#276fc2;color:white;font-size:.95rem}
+  .task button{padding:6px 8px;font-size:.78rem;border-radius:7px;white-space:nowrap}
+  button:hover{filter:brightness(.94)}
+  button:disabled{background:#aab5c2;cursor:default}
+  .correct input{border-color:#27a85f;background:#edfff4}
+  .wrong input{border-color:#d94b4b;background:#fff1f1}
+  .feedback{font-size:.9rem;min-height:18px;margin-top:3px;font-weight:bold}
+  .ok{color:#168648}.no{color:#c53636}
+  .bottom{text-align:center;margin-top:22px}
+  #nextBtn,#restartBtn{font-size:1.05rem;padding:12px 24px;background:#15945a}
+  #nextBtn:disabled{background:#aab5c2}
+  .hidden{display:none}
+  #end{padding:28px;text-align:center}
+  #end h2{font-size:2rem;color:#1756a9}
+  @media(max-width:650px){
+    .task{grid-template-columns:36px 1fr 82px 62px;gap:6px}
+    .task button{padding:5px 5px;font-size:.70rem}
+    .wrap{padding:8px;margin:8px auto}.card{padding:14px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>⚡ Potenssipeli</h1>
+    <div class="sub">Laske potenssit. Kaikkien tehtävien vastaus on korkeintaan 100.</div>
+    <div class="top">
+      <div class="badge">Kierros: <span id="round">1</span>/3</div>
+      <div class="badge">Pisteet: <span id="score">0</span>/30</div>
+      <div class="badge">Oikein tällä kierroksella: <span id="roundScore">0</span>/10</div>
+    </div>
+    <div id="game"></div>
+    <div class="bottom">
+      <button id="nextBtn" disabled>Uudet kysymykset →</button>
+    </div>
+    <div id="end" class="hidden">
+      <h2>Peli päättyi!</h2>
+      <p>Sait <strong><span id="finalScore"></span> / 30</strong> pistettä.</p>
+      <button id="restartBtn">Pelaa uudelleen</button>
+    </div>
+  </div>
+</div>
+<script>
+let round=1, score=0, solved=0;
+let questions=[];
+const game=document.getElementById('game');
+const nextBtn=document.getElementById('nextBtn');
+
+function allPossible(){
+  const arr=[];
+  for(let base=1;base<=10;base++){
+    for(let exp=2;exp<=6;exp++){
+      const value=base**exp;
+      if(value<=100) arr.push({base,exp,value});
+    }
+  }
+  return arr;
+}
+function shuffle(a){
+  a=[...a];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+function newRound(){
+  solved=0;
+  document.getElementById('roundScore').textContent=0;
+  nextBtn.disabled=true;
+  questions=shuffle(allPossible()).slice(0,10);
+  game.innerHTML='';
+  questions.forEach((q,i)=>{
+    const row=document.createElement('div'); row.className='task'; row.id='row'+i;
+    row.innerHTML=`<div class="num">${i+1}.</div><div><div class="expr">${q.base}<sup>${q.exp}</sup> =</div><div class="feedback" id="fb${i}"></div></div><input id="ans${i}" type="number" inputmode="numeric" aria-label="Vastaus tehtävään ${i+1}"><button id="btn${i}">Tarkista</button>`;
+    game.appendChild(row);
+    document.getElementById('btn'+i).onclick=()=>check(i);
+    document.getElementById('ans'+i).addEventListener('keydown',e=>{if(e.key==='Enter')check(i)});
+  });
+}
+function check(i){
+  const input=document.getElementById('ans'+i), btn=document.getElementById('btn'+i), row=document.getElementById('row'+i), fb=document.getElementById('fb'+i);
+  if(input.value===''){fb.textContent='Syötä vastaus.';fb.className='feedback no';return;}
+  if(Number(input.value)===questions[i].value){
+    if(!btn.disabled){score++;solved++;}
+    row.className='task correct'; fb.textContent='✓ Oikein!';fb.className='feedback ok';
+    input.disabled=true;btn.disabled=true;
+    document.getElementById('score').textContent=score;
+    document.getElementById('roundScore').textContent=solved;
+    if(solved===10) nextBtn.disabled=false;
+  }else{
+    row.className='task wrong';fb.textContent='✗ Ei aivan. Yritä uudelleen!';fb.className='feedback no';
+    input.select();
+  }
+}
+nextBtn.onclick=()=>{
+  if(round<3){round++;document.getElementById('round').textContent=round;newRound();window.scrollTo({top:0,behavior:'smooth'});}
+  else finish();
+};
+function finish(){
+  game.classList.add('hidden');nextBtn.classList.add('hidden');
+  document.getElementById('end').classList.remove('hidden');document.getElementById('finalScore').textContent=score;
+}
+document.getElementById('restartBtn').onclick=()=>{
+  round=1;score=0;document.getElementById('round').textContent=1;document.getElementById('score').textContent=0;
+  game.classList.remove('hidden');nextBtn.classList.remove('hidden');document.getElementById('end').classList.add('hidden');newRound();
+};
+newRound();
+</script>
+</body>
+</html>
