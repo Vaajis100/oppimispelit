@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matematiikan koe – harjoittelupeli</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#172033}
+.container{max-width:1050px;margin:auto;padding:22px}
+header{background:#173f73;color:white;padding:24px;border-radius:18px;margin-bottom:20px}
+header h1{margin:0 0 8px;font-size:30px}
+header p{margin:0;opacity:.92}
+.panel{background:white;border-radius:18px;padding:22px;box-shadow:0 4px 18px rgba(0,0,0,.08);margin-bottom:18px}
+.topics{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:12px;margin-top:18px}
+button{font:inherit;cursor:pointer;border:0}
+.topic{min-height:72px;text-align:left;padding:14px;border-radius:13px;background:#eef4fb;border:2px solid #d8e3f0;font-weight:700;color:#183a61}
+.topic:hover{border-color:#3977b8;background:#e5f0fc}
+.topic.all{background:#fff4cf;border-color:#f0c950}
+.hidden{display:none!important}
+.gamehead{display:flex;justify-content:space-between;gap:15px;align-items:center;border-bottom:1px solid #ddd;padding-bottom:13px}
+.small{color:#667085;font-size:14px}
+.question{text-align:center;font-size:32px;font-weight:700;margin:42px 0 25px;line-height:1.4}
+.choices{max-width:620px;margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.choice{padding:16px;border-radius:13px;background:#f7f9fc;border:2px solid #d8e0ea;font-size:21px;font-weight:700}
+.choice:hover{border-color:#3977b8}
+.choice:disabled{cursor:default}
+.correct{background:#dff6e7!important;border-color:#35a65a!important}
+.wrong{background:#ffe1e1!important;border-color:#dc4c4c!important}
+.feedback{text-align:center;min-height:32px;margin-top:22px;font-size:20px;font-weight:bold}
+.actions{text-align:center;margin-top:15px}
+.primary,.secondary{padding:13px 22px;border-radius:11px;font-weight:bold;margin:5px}
+.primary{background:#1769aa;color:white}
+.secondary{background:#e9eef5;color:#172033}
+.scorebox{font-weight:bold;font-size:18px}
+.result{text-align:center}
+.result .big{font-size:48px;font-weight:bold;margin:20px}
+sup{font-size:.62em}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.05;margin:0 .18em}
+.frac .top{border-bottom:2px solid currentColor;padding:0 .2em .12em}
+.frac .bottom{padding:.12em .2em 0}
+@media(max-width:600px){
+ .container{padding:10px}.choices{grid-template-columns:1fr}.question{font-size:26px;margin-top:30px}
+ header h1{font-size:24px}.gamehead{align-items:flex-start;flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>Matematiikan koe – harjoittelupeli</h1>
+<p>Valitse aihe ja ratkaise 10 satunnaista tehtävää. Oikeasta vastauksesta saat pisteen.</p>
+</header>
+
+<section id="menu" class="panel">
+<h2>Valitse harjoiteltava aihe</h2>
+<p class="small">Voit harjoitella yhtä kappaletta tai koko koealuetta sekaharjoitteluna.</p>
+<div id="topics" class="topics"></div>
+</section>
+
+<section id="game" class="panel hidden">
+<div class="gamehead">
+<div><strong id="topicName"></strong><div class="small">Tehtävä <span id="qnum">1</span> / 10</div></div>
+<div class="scorebox">Pisteet: <span id="score">0</span></div>
+<button id="back" class="secondary">Vaihda aihetta</button>
+</div>
+<div id="question" class="question"></div>
+<form id="answerForm" style="max-width:420px;margin:0 auto;text-align:center">
+<label for="answerInput" style="display:block;font-weight:bold;margin-bottom:9px">Kirjoita vastaus</label>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+<input id="answerInput" autocomplete="off" inputmode="text" style="min-height:50px;min-width:180px;max-width:240px;font-size:22px;text-align:center;border:2px solid #d8e0ea;border-radius:11px;padding:8px 12px" aria-label="Vastaus">
+<button id="answerBtn" type="submit" class="primary">Tarkista vastaus</button>
+</div>
+<div id="answerHint" class="small" style="margin-top:8px"></div>
+</form>
+<div id="feedback" class="feedback" aria-live="polite"></div>
+<div class="actions"><button id="next" class="primary hidden">Seuraava tehtävä</button></div>
+</section>
+
+<section id="result" class="panel result hidden">
+<h2>Harjoitus valmis!</h2>
+<div id="final" class="big"></div>
+<p id="message"></p>
+<button id="again" class="primary">Harjoittele samaa uudelleen</button>
+<button id="menuBtn" class="secondary">Valitse toinen aihe</button>
+</section>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[rnd(0,a.length-1)];
+const shuffle=a=>[...a].sort(()=>Math.random()-.5);
+const fmt=n=>n<0?'(−'+Math.abs(n)+')':String(n);
+
+const topics=[
+['addsub','KPL 2 – Yhteen- ja vähennyslasku'],
+['mult','KPL 3 – Kertolasku'],
+['div','KPL 4 – Jakolasku'],
+['natural','KPL 5 – Laskutoimituksia luonnollisilla luvuilla'],
+['abs','KPL 8 – Itseisarvo'],
+['compare','KPL 8 – Vertailumerkit'],
+['intbasic','KPL 9 – Laskuja kokonaisluvuilla'],
+['opposite','KPL 10 – Vastaluku'],
+['intadd','KPL 11 – Kokonaislukujen yhteen- ja vähennyslasku'],
+['intmult','KPL 12 – Kokonaislukujen kertolasku'],
+['power','KPL 13 – Potenssi'],
+['intdiv','KPL 14 – Kokonaislukujen jakolasku'],
+['mixedint','KPL 15 – Kokonaislukujen laskutoimituksia'],
+['all','⭐ Sekaharjoittelu – koko koealue']
+];
+
+let mode='addsub', qnum=1, score=0, current=null, locked=false;
+
+function distract(ans){
+ let s=new Set([ans]);
+ while(s.size<4){let d=ans+rnd(-8,8); if(d!==ans)s.add(d)}
+ return shuffle([...s]);
+}
+
+function makeQuestion(type){
+ if(type==='all') type=pick(topics.filter(x=>x[0]!=='all').map(x=>x[0]));
+ let a,b,c,ans,text,kind='number';
+ const frac=(n,d)=>`<span class="frac"><span class="top">${n}</span><span class="bottom">${d}</span></span>`;
+ switch(type){
+ case 'addsub':
+   // Päässälaskuun sopivia, enintään kaksinumeroisia lukuja ja vastauksia.
+   if(Math.random()<.5){
+     a=rnd(6,60); b=rnd(2,Math.min(35,99-a)); ans=a+b; text=`${a} + ${fmt(b)} = ?`;
+   }else{
+     a=rnd(15,99); b=rnd(2,Math.min(45,a)); ans=a-b; text=`${a} − ${fmt(b)} = ?`;
+   }
+   break;
+ case 'mult':
+   // Kertotaulupainotus, joskus helppo kaksinumeroinen kerrottava.
+   if(Math.random()<.8){a=rnd(2,12);b=rnd(2,10);}
+   else{a=pick([11,12,15,20,25]);b=rnd(2,4);}
+   ans=a*b;
+   if(Math.abs(ans)>=100) return makeQuestion(type);
+   text=`${a} · ${fmt(b)} = ?`;break;
+ case 'div':
+   // Jakolasku murtoviivalla. Jako menee aina tasan.
+   b=rnd(2,10); ans=rnd(2,10); a=b*ans;
+   if(a>=100) return makeQuestion(type);
+   text=`${frac(a,b)} = ?`;break;
+ case 'natural':
+   // Laskujärjestys, mutta luvut ja tulos pysyvät päässälaskutasolla.
+   a=rnd(2,20);b=rnd(2,9);c=rnd(1,15);
+   if(Math.random()<.5){ans=a+b*c;text=`${a} + ${fmt(b)} · ${fmt(c)} = ?`}
+   else{ans=a*b-c;text=`${a} · ${fmt(b)} − ${fmt(c)} = ?`}
+   if(!Number.isInteger(ans)||Math.abs(ans)>=100) return makeQuestion(type);
+   break;
+ case 'abs':
+   a=rnd(-30,30);ans=Math.abs(a);text=`|${a}| = ?`;break;
+ case 'compare':
+   a=rnd(-30,30);do{b=rnd(-30,30)}while(a===b);
+   ans=a<b?'<':'>';text=`Valitse oikea vertailumerkki:<br>${a} ___ ${b}`;kind='compare';break;
+ case 'intbasic':
+   a=rnd(-25,25);b=rnd(-20,20);ans=a+b;
+   text=`${a} + ${fmt(b)} = ?`;break;
+ case 'opposite':
+   a=rnd(-30,30);if(a===0)a=7;ans=-a;text=`Mikä on luvun ${a} vastaluku?`;break;
+ case 'intadd':
+   a=rnd(-30,30);b=rnd(-20,20);
+   if(Math.random()<.5){ans=a+b;text=`${a} + ${fmt(b)} = ?`}
+   else{ans=a-b;text=`${a} − ${fmt(b)} = ?`}
+   if(Math.abs(ans)>=100) return makeQuestion(type);
+   break;
+ case 'intmult':
+   a=rnd(-10,10);b=rnd(-10,10);ans=a*b;
+   text=`${fmt(a)} · ${fmt(b)} = ?`;break;
+ case 'power':
+   // Potensseissa harjoitellaan myös negatiivista kantalukua
+   // sekä sulkujen merkitystä: (-3)^2 ja -3^2 ovat eri asioita.
+   {
+     let pv=rnd(1,3);
+     do{
+       a=rnd(2,7);
+       b=rnd(2,3);
+       if(pv===1){
+         ans=a**b;
+         text=`${a}<sup>${b}</sup> = ?`;
+       }else if(pv===2){
+         ans=(-a)**b;
+         text=`(−${a})<sup>${b}</sup> = ?`;
+       }else{
+         ans=-(a**b);
+         text=`−${a}<sup>${b}</sup> = ?`;
+       }
+     }while(Math.abs(ans)>=100);
+   }
+   break;
+ case 'intdiv':
+   // Kokonaislukujen jako murtoviivalla, aina kokonaislukutulos.
+   b=pick([-10,-9,-8,-7,-6,-5,-4,-3,-2,2,3,4,5,6,7,8,9,10]);
+   ans=pick([-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,7,8,9,10]);
+   a=b*ans;
+   if(Math.abs(a)>=100) return makeQuestion(type);
+   text=`${frac(fmt(a),fmt(b))} = ?`;break;
+ case 'mixedint':
+   // Sekalaskuja pienillä luvuilla ja kokonaislukuvastauksilla.
+   let v=rnd(1,4);
+   if(v===1){
+     a=rnd(-15,15);b=rnd(-8,8);c=rnd(-6,6);
+     ans=a+b*c;text=`${a} + ${fmt(b)} · ${fmt(c)} = ?`;
+   }else if(v===2){
+     a=rnd(-12,12);b=rnd(-8,8);c=rnd(-5,5);
+     ans=(a+b)*c;text=`(${a} + ${fmt(b)}) · ${fmt(c)} = ?`;
+   }else if(v===3){
+     a=rnd(-10,10);b=rnd(-9,9);c=rnd(-12,12);
+     ans=a*b-c;text=`${fmt(a)} · ${fmt(b)} − ${fmt(c)} = ?`;
+   }else{
+     let d=pick([-8,-7,-6,-5,-4,-3,-2,2,3,4,5,6,7,8]);
+     let quotient=rnd(-8,8);
+     let numerator=d*quotient;
+     c=rnd(-12,12);
+     ans=quotient+c;
+     text=`${frac(fmt(numerator),fmt(d))} + ${fmt(c)} = ?`;
+   }
+   if(!Number.isInteger(ans)||Math.abs(ans)>=100) return makeQuestion(type);
+   break;
+ }
+ return {text,ans,kind};
+}
+function start(m){
+ mode=m;qnum=1;score=0;
+ $('#menu').classList.add('hidden');$('#result').classList.add('hidden');$('#game').classList.remove('hidden');
+ $('#topicName').textContent=topics.find(x=>x[0]===mode)[1];
+ $('#score').textContent=0;show();
+}
+function show(){
+ locked=false;current=makeQuestion(mode);
+ $('#qnum').textContent=qnum;$('#question').innerHTML=current.text;
+ $('#feedback').textContent='';$('#next').classList.add('hidden');
+ const input=$('#answerInput');
+ input.value=''; input.disabled=false; $('#answerBtn').disabled=false;
+ $('#answerHint').textContent=current.kind==='compare'?'Kirjoita vertailumerkki <, > tai =':'';
+ setTimeout(()=>input.focus(),0);
+}
+function answerTyped(){
+ if(locked)return;
+ const input=$('#answerInput');
+ let v=input.value.trim().replace('−','-');
+ if(v===''){ $('#feedback').textContent='Kirjoita ensin vastaus.'; input.focus(); return; }
+ let ok;
+ if(current.kind==='compare'){
+   ok=v===String(current.ans);
+ }else{
+   const n=Number(v.replace(',','.'));
+   if(!Number.isFinite(n)){ $('#feedback').textContent='Kirjoita vastaukseksi kokonaisluku.'; input.focus(); return; }
+   ok=n===current.ans;
+ }
+ locked=true;
+ if(ok){
+   score++;
+   $('#feedback').textContent='✓ Oikein!';
+ }else{
+   $('#feedback').textContent=`✗ Väärin. Oikea vastaus on ${current.ans}.`;
+ }
+ $('#score').textContent=score;
+ input.disabled=true; $('#answerBtn').disabled=true;
+ $('#next').classList.remove('hidden');
+ $('#next').focus();
+}
+function next(){
+ if(qnum>=10){finish();return}
+ qnum++;show();
+}
+function finish(){
+ $('#game').classList.add('hidden');$('#result').classList.remove('hidden');
+ $('#final').textContent=`${score} / 10`;
+ $('#message').textContent=score===10?'Erinomaista – kaikki oikein!':
+ score>=8?'Hienoa! Koealue alkaa olla hyvin hallussa.':
+ score>=6?'Hyvä! Harjoittele vielä kohtia, joissa tuli virheitä.':
+ 'Harjoittele aihetta vielä uudelleen. Toisto auttaa!';
+}
+function menu(){
+ $('#game').classList.add('hidden');$('#result').classList.add('hidden');$('#menu').classList.remove('hidden');
+}
+topics.forEach(([id,name])=>{
+ let b=document.createElement('button');b.type='button';b.className='topic'+(id==='all'?' all':'');
+ b.textContent=name;b.addEventListener('click',()=>start(id));$('#topics').appendChild(b);
+});
+$('#answerForm').addEventListener('submit',e=>{e.preventDefault();answerTyped();});
+$('#next').addEventListener('click',next);
+$('#back').addEventListener('click',menu);
+$('#menuBtn').addEventListener('click',menu);
+$('#again').addEventListener('click',()=>start(mode));
+</script>
+</body>
+</html>
