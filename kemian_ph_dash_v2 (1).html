@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Kemian pH-Dash</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; overflow:hidden; font-family:Arial, Helvetica, sans-serif; background:#10182c; }
+  #wrap { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px; }
+  #hud {
+    width:min(1100px, 96vw); display:flex; justify-content:space-between; align-items:center;
+    color:white; font-weight:800; margin-bottom:8px; gap:12px; flex-wrap:wrap;
+  }
+  #title { font-size:clamp(18px, 2.3vw, 28px); }
+  #stats { display:flex; gap:18px; font-size:clamp(14px,1.8vw,20px); }
+  #gameBox {
+    position:relative; width:min(1100px,96vw); aspect-ratio:16/8.5; max-height:82vh;
+    border:4px solid #fff; border-radius:14px; overflow:hidden; background:#172449;
+    box-shadow:0 12px 40px #0008;
+  }
+  canvas { width:100%; height:100%; display:block; touch-action:none; }
+  .overlay {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:#071020d9; color:#fff; padding:18px; z-index:10;
+  }
+  .panel {
+    width:min(760px, 94%); background:#16264a; border:3px solid #75e6ff; border-radius:18px;
+    padding:22px; text-align:center; box-shadow:0 12px 35px #0008;
+  }
+  h1,h2,p { margin-top:0; }
+  h1 { font-size:clamp(25px,4vw,42px); color:#75e6ff; }
+  h2 { font-size:clamp(20px,3vw,30px); }
+  button {
+    border:0; border-radius:12px; padding:13px 18px; margin:7px; font-size:clamp(15px,2vw,20px);
+    font-weight:800; cursor:pointer; background:#75e6ff; color:#0c1730; box-shadow:0 4px 0 #2788a0;
+  }
+  button:active { transform:translateY(3px); box-shadow:0 1px 0 #2788a0; }
+  .answer { width:min(650px,95%); display:block; margin:9px auto; background:#f5f7ff; box-shadow:0 4px 0 #a9b5d1; }
+  .answer:hover { background:#dffaff; }
+  #feedback { min-height:28px; font-weight:800; font-size:18px; margin-top:10px; }
+  #instructions { line-height:1.45; font-size:clamp(14px,1.7vw,18px); }
+  .key { display:inline-block; background:#fff; color:#111; border-radius:6px; padding:2px 7px; font-weight:bold; }
+  #touchHint { color:#cbd7ff; font-size:13px; text-align:center; margin-top:7px; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud">
+    <div id="title">⚗️ Kemian pH-Dash</div>
+    <div id="stats"><span>⭐ Pisteet: <b id="score">3</b></span><span>❓ Kysymys: <b id="qcount">0</b>/28</span></div>
+  </div>
+  <div id="gameBox">
+    <canvas id="game" width="1100" height="585"></canvas>
+
+    <div id="startScreen" class="overlay">
+      <div class="panel">
+        <h1>Kemian pH-Dash</h1>
+        <p id="instructions">
+          Pallo liikkuu automaattisesti. Hyppää esteiden yli ja osu <b>?</b>-laatikoihin.<br><br>
+          <span class="key">Välilyönti</span> / <span class="key">↑</span> / hiiren klikkaus / kosketus = hyppy.<br>
+          Oikea vastaus <b>+1 piste</b>, väärä vastaus <b>−1 piste</b>.<br>
+          Aloitat kolmella pisteellä. Jos pisteet putoavat nollaan, peli päättyy.
+        </p>
+        <button id="startBtn">Aloita peli</button>
+      </div>
+    </div>
+
+    <div id="questionScreen" class="overlay hidden">
+      <div class="panel">
+        <h2 id="questionText"></h2>
+        <div id="answers"></div>
+        <div id="feedback"></div>
+      </div>
+    </div>
+
+    <div id="endScreen" class="overlay hidden">
+      <div class="panel">
+        <h1 id="endTitle">Peli päättyi</h1>
+        <p id="endText"></p>
+        <button id="restartBtn">Pelaa uudelleen</button>
+      </div>
+    </div>
+  </div>
+  <div id="touchHint">Peli toimii myös kosketusnäytöllä: napauta pelialuetta hypätäksesi.</div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
+const qcountEl = document.getElementById("qcount");
+const startScreen = document.getElementById("startScreen");
+const questionScreen = document.getElementById("questionScreen");
+const endScreen = document.getElementById("endScreen");
+const questionText = document.getElementById("questionText");
+const answersEl = document.getElementById("answers");
+const feedbackEl = document.getElementById("feedback");
+
+const questions = [
+ {q:"Millainen aine on happo-emäsindikaattori?", a:"Aine, joka vaihtaa väriä pH:n mukaan", w:["Aine, joka aina neutraloi hapon","Aine, joka tekee liuoksesta emäksisen","Aine, joka ei reagoi happojen kanssa"]},
+ {q:"Jos aineen pH on 3, aine on ____________.", a:"hapan", w:["emäksinen","neutraali","suola"]},
+ {q:"Jos aineen pH on 10, aine on ____________.", a:"emäksinen", w:["hapan","neutraali","metalli"]},
+ {q:"Jos aineen pH on 7, aine on ____________.", a:"neutraali", w:["hapan","emäksinen","vahva happo"]},
+ {q:"Millainen aine happo on kemiassa?", a:"Aine, joka luovuttaa protonin (H⁺)", w:["Aine, joka vastaanottaa protonin","Aine, joka muodostaa aina saostuman","Aine, jonka pH on aina 7"]},
+ {q:"Millainen aine emäs on kemiassa?", a:"Aine, joka vastaanottaa protonin (H⁺)", w:["Aine, joka luovuttaa protonin","Aine, joka on aina metalli","Aine, jonka pH on aina 7"]},
+ {q:"Mikä ioni aiheuttaa happamuuden vesiliuoksessa?", a:"Oksoniumioni H₃O⁺", w:["Hydroksidi-ioni OH⁻","Natriumioni Na⁺","Kloridi-ioni Cl⁻"]},
+ {q:"Mikä ioni aiheuttaa emäksisyyden vesiliuoksessa?", a:"Hydroksidi-ioni OH⁻", w:["Oksoniumioni H₃O⁺","Vetyioni H⁺ ainoana vedessä","Kloridi-ioni Cl⁻"]},
+ {q:"Onko sitruuna hapanta vai emäksistä?", a:"Hapanta", w:["Emäksistä","Neutraalia","Sitruunalla ei ole pH-arvoa"]},
+ {q:"Onko viemärinavausaine yleensä hapanta vai emäksistä?", a:"Emäksistä", w:["Hapanta","Neutraalia","Aina pH 7"]},
+ {q:"Mikä on natriumhydroksidin kemiallinen kaava?", a:"NaOH", w:["NaCl","HCl","NH₃"]},
+ {q:"Mikä on ammoniakin kemiallinen kaava?", a:"NH₃", w:["NH₄","NO₃","HNO₃"]},
+ {q:"Mikä on rikkihapon kemiallinen kaava?", a:"H₂SO₄", w:["H₂CO₃","HNO₃","H₃PO₄"]},
+ {q:"Mikä on suolahapon kemiallinen kaava?", a:"HCl", w:["NaCl","H₂SO₄","HClO"]},
+ {q:"Mikä on typpihapon kemiallinen kaava?", a:"HNO₃", w:["H₂SO₄","NH₃","H₃PO₄"]},
+ {q:"Mikä on hiilihapon kemiallinen kaava?", a:"H₂CO₃", w:["H₂SO₄","HNO₃","CO₂"]},
+ {q:"Mikä on fosforihapon kemiallinen kaava?", a:"H₃PO₄", w:["H₂SO₄","H₃PO₃","HNO₃"]},
+ {q:"Mikä varoitusmerkki on natriumhydroksidissa?", a:"Syövyttävä", w:["Räjähtävä","Ympäristölle vaarallinen","Paineenalainen kaasu"]},
+ {q:"Mikä varoitusmerkki on väkevässä suolahapossa?", a:"Syövyttävä", w:["Räjähtävä","Hapettava","Radioaktiivinen"]},
+ {q:"Onko magnesiumhydroksidi happo vai emäs?", a:"Emäs", w:["Happo","Neutraali alkuaine","Suola"]},
+ {q:"Mitä tarkoittaa neutraloituminen?", a:"Happo ja emäs reagoivat ja niiden ominaisuudet kumoutuvat", w:["Kaksi happoa reagoi keskenään","Vesi muuttuu hapoksi","Suola hajoaa metalliksi"]},
+ {q:"Mikä on neutraloitumisen yleinen kaava?", a:"Happo + emäs → suola + vesi", w:["Happo + happo → emäs + vesi","Emäs + vesi → happo + suola","Suola + vesi → happo + emäs"]},
+ {q:"Mikä on puskuriliuos?", a:"Liuos, joka vastustaa pH:n muutoksia", w:["Liuos, jonka pH on aina 7","Erittäin vahva happo","Liuos, jossa ei ole vettä"]},
+ {q:"Mikä suola syntyy suolahapon ja natriumhydroksidin välisessä reaktiossa?", a:"Natriumkloridi (NaCl)", w:["Natriumsulfaatti (Na₂SO₄)","Kaliumkloridi (KCl)","Natriumnitraatti (NaNO₃)"]},
+ {q:"Mikä reaktioyhtälö kuvaa suolahapon ja natriumhydroksidin neutraloitumista?", a:"HCl + NaOH → NaCl + H₂O", w:["HCl + NaOH → H₂ + NaClO","H₂SO₄ + NaOH → NaCl + H₂O","NaCl + H₂O → HCl + NaOH"]},
+ {q:"Mitä neutraloitumisreaktiossa aina syntyy?", a:"Vettä", w:["Vetykaasua","Happea","Hiilidioksidia"]},
+ {q:"Mitkä ovat neutraloitumisreaktion lähtöaineet?", a:"Happo ja emäs", w:["Suola ja vesi","Kaksi happoa","Metalli ja happi"]},
+ {q:"Mikä seuraavista on esimerkki puskuriliuoksesta?", a:"Veri", w:["Tislattu vesi","Ruokaöljy","Puhdas etanoli"]}
+];
+
+let shuffledQuestions = [];
+let score = 3, answered = 0, running = false, paused = false, gameOver = false;
+let frame = 0, speed = 5.0, worldX = 0, nextQuestionAt = 700, nextObstacleAt = 300;
+const groundY = 500;
+const player = {x:155, y:groundY-28, r:24, vy:0, onGround:true, rotation:0};
+let obstacles = [], qboxes = [], particles = [];
+
+function shuffle(arr){ return [...arr].sort(()=>Math.random()-0.5); }
+function resetGame(){
+  score=3; answered=0; running=true; paused=false; gameOver=false; frame=0; worldX=0;
+  speed=5.0; nextQuestionAt=650; nextObstacleAt=280; obstacles=[]; qboxes=[]; particles=[];
+  player.y=groundY-player.r; player.vy=0; player.onGround=true; player.rotation=0;
+  shuffledQuestions=shuffle(questions);
+  scoreEl.textContent=score; qcountEl.textContent=answered;
+  endScreen.classList.add("hidden"); questionScreen.classList.add("hidden"); startScreen.classList.add("hidden");
+}
+function jump(){
+  if(!running || paused || gameOver) return;
+  if(player.onGround){ player.vy=-13.2; player.onGround=false; }
+}
+function addObstacle(){
+  // Geometry Dash -henkisiä mutta tarkoituksella matalia ja reiluja esteitä.
+  // Pelaajan tavallinen hyppy nousee noin 120 px, joten alaesteet ovat enintään ~52 px.
+  const x = canvas.width + 30;
+  const kind = Math.random();
+
+  if(kind < 0.28){
+    // Yksi matala piikki
+    obstacles.push({x:x,y:groundY-36,w:38,h:36,type:"spike",side:"bottom"});
+  } else if(kind < 0.50){
+    // Kaksi pientä piikkiä
+    obstacles.push({x:x,y:groundY-31,w:32,h:31,type:"spike",side:"bottom"});
+    obstacles.push({x:x+36,y:groundY-31,w:32,h:31,type:"spike",side:"bottom"});
+  } else if(kind < 0.67){
+    // Matala laatikko, jonka yli voi hypätä
+    obstacles.push({x:x,y:groundY-45,w:52,h:45,type:"block",side:"bottom"});
+  } else if(kind < 0.84){
+    // Katosta roikkuva este. Maan tasolla jää paljon tilaa alittaa.
+    obstacles.push({x:x,y:0,w:48,h:105,type:"block",side:"top"});
+  } else {
+    // Ylä- ja alaeste muodostavat leveän portin.
+    // Aukko on tarkoituksella suuri, joten pelaaja voi kulkea/hypätä siitä turvallisesti.
+    obstacles.push({x:x,y:0,w:44,h:92,type:"spikeTop",side:"top"});
+    obstacles.push({x:x,y:groundY-34,w:44,h:34,type:"spike",side:"bottom"});
+  }
+}
+function addQuestionBox(){
+  const elevated = Math.random()<0.5;
+  qboxes.push({x:canvas.width+40, y:elevated?groundY-125:groundY-68, w:58,h:58,hit:false, pulse:0});
+}
+function circleRect(cx,cy,r,rect){
+  const nx=Math.max(rect.x,Math.min(cx,rect.x+rect.w));
+  const ny=Math.max(rect.y,Math.min(cy,rect.y+rect.h));
+  const dx=cx-nx,dy=cy-ny; return dx*dx+dy*dy<r*r;
+}
+function lose(reason){
+  running=false; gameOver=true;
+  document.getElementById("endTitle").textContent="Peli päättyi";
+  document.getElementById("endText").innerHTML=reason+"<br><br>Vastasit "+answered+" kysymykseen ja sait "+score+" pistettä.";
+  endScreen.classList.remove("hidden");
+}
+function win(){
+  running=false; gameOver=true;
+  document.getElementById("endTitle").textContent="🎉 Mahtavaa!";
+  document.getElementById("endText").innerHTML="Selvisit koko kemian radan!<br><br>Lopulliset pisteet: <b>"+score+"</b> / kysymyksiä 28.";
+  endScreen.classList.remove("hidden");
+}
+function askQuestion(){
+  if(answered>=shuffledQuestions.length){ win(); return; }
+  paused=true;
+  const item=shuffledQuestions[answered];
+  questionText.textContent=item.q;
+  answersEl.innerHTML=""; feedbackEl.textContent="";
+  const opts=shuffle([item.a,...item.w]);
+  opts.forEach(opt=>{
+    const b=document.createElement("button"); b.className="answer"; b.textContent=opt;
+    b.onclick=()=>answer(opt,item.a,b);
+    answersEl.appendChild(b);
+  });
+  questionScreen.classList.remove("hidden");
+}
+function answer(chosen,correct,button){
+  [...answersEl.children].forEach(b=>b.disabled=true);
+  answered++; qcountEl.textContent=answered;
+  if(chosen===correct){
+    score++; scoreEl.textContent=score;
+    feedbackEl.textContent="✓ Oikein! +1 piste";
+    feedbackEl.style.color="#7dff9b";
+  } else {
+    score--; scoreEl.textContent=score;
+    feedbackEl.innerHTML="✗ Väärin. Oikea vastaus: <b>"+correct+"</b> (−1 piste)";
+    feedbackEl.style.color="#ff9b9b";
+  }
+  setTimeout(()=>{
+    questionScreen.classList.add("hidden");
+    if(score<=0){ lose("Pisteesi putosivat nollaan."); return; }
+    if(answered>=questions.length){ win(); return; }
+    paused=false;
+  },1500);
+}
+function update(){
+  if(!running || paused || gameOver) return;
+  frame++; worldX+=speed;
+  speed=Math.min(7.2,5+answered*0.045);
+
+  player.vy+=0.68; player.y+=player.vy; player.rotation+=0.09;
+  if(player.y+player.r>=groundY){ player.y=groundY-player.r; player.vy=0; player.onGround=true; }
+
+  if(worldX>=nextObstacleAt){
+    addObstacle(); nextObstacleAt=worldX+300+Math.random()*300;
+  }
+  if(worldX>=nextQuestionAt && answered+qboxes.filter(q=>!q.hit).length < questions.length){
+    addQuestionBox(); nextQuestionAt=worldX+760+Math.random()*260;
+  }
+
+  obstacles.forEach(o=>o.x-=speed);
+  qboxes.forEach(q=>{q.x-=speed;q.pulse+=0.08;});
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;});
+
+  obstacles=obstacles.filter(o=>o.x+o.w>-30);
+  qboxes=qboxes.filter(q=>q.x+q.w>-40 && !q.hit);
+  particles=particles.filter(p=>p.life>0);
+
+  for(const o of obstacles){
+    let hitRect = o.type.includes("spike") ? {x:o.x+9,y:o.y+9,w:o.w-18,h:Math.max(8,o.h-10)} : {x:o.x+5,y:o.y+5,w:o.w-10,h:o.h-10};
+    if(circleRect(player.x,player.y,player.r*0.72,hitRect)){
+      lose("Osuit esteeseen.");
+      return;
+    }
+  }
+  for(const q of qboxes){
+    if(!q.hit && circleRect(player.x,player.y,player.r,q)){
+      q.hit=true;
+      for(let i=0;i<18;i++) particles.push({x:q.x+29,y:q.y+29,vx:(Math.random()-.5)*8,vy:(Math.random()-.5)*8,life:30});
+      askQuestion(); break;
+    }
+  }
+}
+function drawBackground(){
+  const g=ctx.createLinearGradient(0,0,0,canvas.height);
+  g.addColorStop(0,"#152a58"); g.addColorStop(1,"#0c1730");
+  ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.globalAlpha=.18; ctx.strokeStyle="#75e6ff"; ctx.lineWidth=1;
+  const grid=50, off=-(worldX*.35%grid);
+  for(let x=off;x<canvas.width;x+=grid){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,groundY);ctx.stroke();}
+  for(let y=0;y<groundY;y+=grid){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
+  ctx.globalAlpha=1;
+
+  // distant chemistry motifs
+  ctx.globalAlpha=.08; ctx.fillStyle="#fff"; ctx.font="bold 44px Arial";
+  ["H⁺","OH⁻","pH","H₂O","NaOH","HCl"].forEach((t,i)=>{
+    let x=((i*230-worldX*.12)%(canvas.width+250)+canvas.width+250)%(canvas.width+250)-80;
+    ctx.fillText(t,x,100+(i%3)*95);
+  }); ctx.globalAlpha=1;
+
+  ctx.fillStyle="#203b69"; ctx.fillRect(0,groundY,canvas.width,canvas.height-groundY);
+  ctx.fillStyle="#203b69"; ctx.fillRect(0,0,canvas.width,12);
+  ctx.fillStyle="#75e6ff"; ctx.fillRect(0,10,canvas.width,3);
+  ctx.fillStyle="#75e6ff"; ctx.fillRect(0,groundY,canvas.width,5);
+  ctx.strokeStyle="#2e568f"; ctx.lineWidth=2;
+  for(let x=-(worldX%50);x<canvas.width;x+=50){ctx.beginPath();ctx.moveTo(x,groundY+5);ctx.lineTo(x+35,canvas.height);ctx.stroke();}
+}
+function drawObstacle(o){
+  if(o.type==="spike"){
+    ctx.fillStyle="#ff5c78"; ctx.strokeStyle="#fff"; ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(o.x,o.y+o.h);
+    ctx.lineTo(o.x+o.w/2,o.y);
+    ctx.lineTo(o.x+o.w,o.y+o.h);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  } else if(o.type==="spikeTop"){
+    ctx.fillStyle="#ff5c78"; ctx.strokeStyle="#fff"; ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(o.x,o.y);
+    ctx.lineTo(o.x+o.w/2,o.y+o.h);
+    ctx.lineTo(o.x+o.w,o.y);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  } else {
+    ctx.fillStyle="#9a55ff"; ctx.strokeStyle="#fff";ctx.lineWidth=2;
+    ctx.fillRect(o.x,o.y,o.w,o.h);ctx.strokeRect(o.x,o.y,o.w,o.h);
+    ctx.fillStyle="#c7a4ff";
+    if(o.side==="top") ctx.fillRect(o.x+7,o.y+o.h-15,o.w-14,8);
+    else ctx.fillRect(o.x+7,o.y+7,o.w-14,8);
+  }
+}
+function drawQuestion(q){
+  const glow=8+Math.sin(q.pulse)*5;
+  ctx.save(); ctx.shadowColor="#ffe45e";ctx.shadowBlur=glow;
+  ctx.fillStyle="#ffd83d";ctx.strokeStyle="#fff";ctx.lineWidth=3;
+  ctx.fillRect(q.x,q.y,q.w,q.h);ctx.strokeRect(q.x,q.y,q.w,q.h);
+  ctx.shadowBlur=0;ctx.fillStyle="#18213d";ctx.font="bold 39px Arial";ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillText("?",q.x+q.w/2,q.y+q.h/2+2);ctx.restore();
+}
+function drawPlayer(){
+  ctx.save();ctx.translate(player.x,player.y);ctx.rotate(player.rotation);
+  ctx.shadowColor="#5fffe4";ctx.shadowBlur=18;
+  ctx.fillStyle="#44e3c1";ctx.beginPath();ctx.arc(0,0,player.r,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;ctx.strokeStyle="#fff";ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle="#12213d";ctx.beginPath();ctx.arc(7,-7,5,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+function drawParticles(){
+  ctx.fillStyle="#ffe45e";
+  particles.forEach(p=>ctx.fillRect(p.x,p.y,5,5));
+}
+function draw(){
+  drawBackground();
+  obstacles.forEach(drawObstacle); qboxes.forEach(drawQuestion); drawParticles(); drawPlayer();
+  if(running && !paused){
+    ctx.fillStyle="#ffffffcc";ctx.font="bold 17px Arial";ctx.textAlign="left";
+    ctx.fillText("Hyppää: VÄLILYÖNTI / ↑ / napautus",20,32);
+  }
+}
+function loop(){ update(); draw(); requestAnimationFrame(loop); }
+
+document.getElementById("startBtn").onclick=resetGame;
+document.getElementById("restartBtn").onclick=resetGame;
+window.addEventListener("keydown",e=>{
+  if(["Space","ArrowUp"].includes(e.code)){e.preventDefault();jump();}
+});
+canvas.addEventListener("pointerdown",e=>{e.preventDefault();jump();});
+loop();
+</script>
+</body>
+</html>
