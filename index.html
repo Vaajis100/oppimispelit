@@ -1,158 +1,72 @@
 <!DOCTYPE html>
 <html lang="fi">
 <head>
-    <meta charset="UTF-8">
-    <title>Tervetuloa pelaamaan oppimispelejä!</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f4f8;
-            color: #333;
-            text-align: center;
-            padding: 50px;
-        }
-
-        h1 {
-            color: #2c3e50;
-            margin-bottom: 40px;
-        }
-
-        .valikko-container {
-            display: flex;
-            justify-content: center;
-            gap: 50px;
-            flex-wrap: wrap;
-        }
-
-        .valikko {
-            background-color: #ffffff;
-            border: 2px solid #3498db;
-            border-radius: 10px;
-            padding: 20px;
-            width: 200px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .valikko h2 {
-            color: #000000; /* Musta */
-            margin-bottom: 15px;
-        }
-
-        .valikko a {
-            display: block;
-            margin-top: 10px;
-            color: #3498db; /* Sininen linkki */
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .valikko a:hover {
-            color: #2980b9;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oppimispelit | Matematiikka, fysiikka ja kemia</title>
+<style>
+:root{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#182b46;background:#f3f7fc}*{box-sizing:border-box}body{margin:0}header{background:linear-gradient(125deg,#163d76,#237db6);color:white;padding:58px 20px 64px;text-align:center}header h1{font-size:clamp(2rem,5vw,3.4rem);margin:0 0 12px}header p{margin:0;opacity:.92;font-size:1.08rem}.wrap{max-width:1060px;margin:-28px auto 70px;padding:0 18px}.search{background:white;padding:18px;border-radius:20px;box-shadow:0 10px 35px #12345a18;margin-bottom:22px}.search label{display:block;font-weight:700;margin-bottom:8px}.search input{width:100%;border:2px solid #dce6f2;border-radius:12px;padding:14px 16px;font:inherit;outline:none}.search input:focus{border-color:#247bb4;box-shadow:0 0 0 3px #247bb422}.grades{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}.grade{background:#fff;border-radius:20px;box-shadow:0 6px 24px #163d7612;overflow:hidden;border:1px solid #e0e9f3}.grade>button{display:flex;align-items:center;justify-content:space-between;width:100%;padding:22px;border:0;background:transparent;color:#183c6d;font:inherit;font-size:1.35rem;font-weight:800;cursor:pointer;text-align:left}.grade>button:hover,.grade>button[aria-expanded=true]{background:#eaf4ff}.chevron{transition:transform .2s}.grade>button[aria-expanded=true] .chevron,.subject>button[aria-expanded=true] .chevron{transform:rotate(180deg)}.subjects{padding:0 13px 14px}.subject{border:1px solid #e3ebf4;border-radius:13px;margin:9px 0;overflow:hidden}.subject>button{width:100%;display:flex;align-items:center;justify-content:space-between;text-align:left;gap:8px;border:0;background:#f7faff;padding:13px 12px;color:#263c55;font:inherit;font-weight:700;cursor:pointer}.subject>button:hover,.subject>button[aria-expanded=true]{background:#e8f2ff}.subject .left{display:flex;gap:8px;align-items:center}.count{font-size:.77rem;background:#e2ecf8;border-radius:99px;padding:3px 8px;white-space:nowrap}.games{padding:8px}.games a{display:block;padding:11px 10px;border-radius:9px;color:#145b94;text-decoration:none;font-size:.92rem;line-height:1.35}.games a:hover,.games a:focus-visible{background:#eaf4ff;text-decoration:underline}.games a+a{border-top:1px solid #edf2f7}.empty{padding:14px;color:#65748a;font-size:.9rem}.hidden{display:none!important}footer{text-align:center;color:#6a7a90;padding:0 20px 30px;font-size:.9rem}@media(max-width:850px){.grades{grid-template-columns:1fr}.wrap{max-width:650px}.grade>button{padding:18px 20px}header{padding:44px 16px 58px}}
+</style>
 </head>
 <body>
-
-    <h1>Tervetuloa pelaamaan oppimispelejä!</h1>
-
-    <div class="valikko-container">
-
-        <div class="valikko">
-            <h2>Matematiikka</h2>
-            <h4>7.luokka</h4>
-             <a href="matematiikan_koeharjoittelupeli (6).html">Harjoittelua kokeeseen</a>
-            <a href="avaruusalus_plus_miinus_peli.html">Avaruusaluspeli (summa ja erotus)</a>
-            <a href="kokonaislukupeli (1).html">Kokonaislukujen laskusäännöt ja merkkisäännöt (summa ja erotus)</a>
-            <a href="Summa ja erotus luonnollisilla luvuilla.html">Yhteen- ja vähennyslasku luonnollisilla luvuilla</a>
-            <a href="desimaalilukupeli_positiiviset_vastaukset.html">Yhteen- ja vähennyslasku desimaaliluvuilla</a>
-            <a href="kertolaskupeli_pisteella.html">kertolaskut luonnollisilla luvuilla</a>
-            <a href="jakolaskupeli_lyhyempi_murtoviiva.html">Jakolaskut luonnollisilla luvuilla</a>
-            <a href="yhteen ja vähennyslasku.html">Yhteen- ja vähennyslasku kokonaisluvuilla</a>
-            <a href="yhteen ja vähennyslasku keskitaso.html">Yhteen- ja vähennyslasku (Keskitaso)</a>
-            <a href="kokonaislukuseikkailu.html">Kokonaislukujen kertolaskuja ampumispeli</a>
-            <a href="kertotaulupeli.html">Kertotaulut</a>
-            <a href="kertolaskupeli.html">Kertolaskupeli (myös negatiiviset luvut) </a>
-            <a href="kertolaskupeli keskitaso.html">Kertolaskupeli (Keskitaso)</a>
-            <a href="Laskujärjestys.html">Laskujärjestys</a>
-            <a href="vertailumerkit.html">Vertailumerkit</a>
-            <a href="Pallopeli kertolaskut.html">Pallopeli (kertolaskut)</a>
-            <a href="avaruusalus_kertolaskupeli (3).html">Avaruusaluspeli (kertolaskut)</a>
-            <a href="kertolasku_matopeli_aloitusnapilla.html">Kertolaskumatopeli (Päivitetty)</a>
-            <a href="potenssipeli.html">Potenssipeli</a>
-            <a href="potenssipeli (1).html">Potenssipeli (Myös Negatiiviset kantaluvut)</a>
-            <a href="potenssimatopeli_korjattu.html">Matopeli (Potenssi)</a>
-            <a href="avaruusraketti_potenssipeli.html">Avaruusrakettipeli (Potenssi)</a>
-            <a href="Prosenttilukujen muuntaminen.html">Prosenttilukujen muuntaminen peli</a>
-            <a href="Kirjainlaskennan perusteet.html">Kirjainlaskenta (Perusteet)</a>
-            <a href="Kirjainlaskenta keskitaso.html">Kirjainlaskenta (Keskitaso)</a>
-            <a href="Lausekkeen arvo.html">Lausekkeen arvo</a>
-            <a href="Geometriset kappaleet.html">Tunnista geometrinen kappale (Monivalinta)</a>
-            <a href="Geometrian laskupeli.html">Määritä kulma, laske pinta-ala tai piiri (Monivalinta)</a>
-            <h4>8.luokka</h4>
-            <a href="prosenttilaskupeli(1).html">Prosenttipeli</a>
-            <a href="potenssimestari_kaikki_pelit.html">Potenssin laskusäännöt</a>
-            <a href="todennakoisyyspeli.html">Todennäköisyys (Pallot laatikossa)</a>
-            <a href="tilastoseikkailu.html"> Kertausta tilastot ja todennäköisyys </a>
-            
-            
-        </div>
-
-        <div class="valikko">
-            <h2>Fysiikka</h2>
-            <h4>7.luokka</h4>
-            <a href="avaruuspeli.html">Avaruuspeli</a>
-            <a href="Aaltoliike.html">Aaltoliike pomppupeli</a>
-            
-            <h4>8.luokka</h4>
-            <a href="Hankaussähkö.html">Kysymyksiä hankaussähköstä</a>
-            <a href="Piirtomerkit sähköoppi.html">Harjoittele sähköopin piirtomerkkejä</a>
-            <a href="Kytkennät.html">Harjoittele sähkökytkentöjä</a>
-            <h4>9.luokka</h4>
-            <a href="Kysymyksiä nopeudesta.html">Kysymyksiä nopeudesta ja kiihtyvyydestä</a>
-            <a href="liikepeli.html">Tunnista liikkeen kuvaaja (monivalinta)</a>
-            <a href="Kuvaajapeli.html">Harjoittele liikkeen kuvaajan tulkintaa</a>
-            <a href="Nopeuden kuvaaja.html">Harjoittele nopeuden kuvaajan tulkintaa</a>
-            <a href="Kirja.html">Sähköinen kirja</a>
-            
-            
-        </div>
-
-        <div class="valikko">
-            <h2>Kemia</h2>
-            <h4>7.luokka</h4>
-            <a href="kemialliset merkit 1.html">Kemialliset merkit 1</a>
-            <a href="kemialliset merkit 2.html">Kemialliset merkit 2</a>
-            <a href="avaruusalus_alkuaineiden_kemialliset_merkit (2).html">Avaruusaluspeli kemialliset merkit 2</a>
-            <a href="kemian_varoitusmerkkipeli.html">Kemian varoitusmerkit (monivalinta)</a>
-            <a href="pallomalli.html">Pallomallin harjoittelua (monivalinta)</a>
-            <a href="kemian_tyovalineet_peli_keittopullo.html">Työvälineiden nimet (monivalinta)</a>
-            <a href="kemian_kasitteet_monivalintapeli.html">Kemian käsitteitä osa 1 (monivalinta)</a>
-            <a href="kemiallisten_kaavojen_peli.html">Kemialliset kaavat (monivalinta)</a>
-            <h4>8.luokka</h4>
-            <a href="kemian_kasitteet_peli.html">Kemian käsitteitä (Monivalinta)</a>
-            <a href="jaksollinen-peli.html">Jaksollinen järjestelmä</a>
-            <a href="elektronirakennepeli (1).html">Elektronirakennepeli</a>
-            <a href="isotooppipeli.html">Isotoopit</a>
-            <a href="ioniyhdisteen muodostuminen.html">Ioniyhdisteen muodostuminen</a>
-            <a href="ioniyhdisteiden nimeäminen.html">Ioniyhdisteen nimeäminen</a>
-            <a href="molekyyliyhdisteiden nimeäminen.html">Molekyyliyhdisteiden nimeäminen</a>
-            <a href="kemia8_kertauspeli.html">Kemian käsitteitä (Monivalinta)</a>
-            <a href="kemian_ph_dash_v2 (1).html">Hapot, emäkset ja neutralointi (pH-Dash peli)</a>
-            
-            <h4>9.luokka</h4>
-            <a href="Orgaaninen kemia.html">Kysymyksiä hiilivedyistä</a>
-            <a href="Alkoholit.html">Kysymyksiä alkoholeista</a>
-            <a href="Karboksyylihapot.html">Kysymyksiä karboksyylihapoista</a>
-            <a href="hiilivety.html">Tunnista hiilivety</a>
-            <a href="hiilivedyt ja alkoholit.html">Tunnista hiilivety tai alkoholi</a>
-            <a href="hiilivedyt ja alkoholit ja karboksyylihapot.html">Tunnista hiilivety tai alkoholi tai karboksyylihappo</a>
-            <a href="orgaanisen kemian käsitteitä.html">Orgaanisen kemian käsitteet</a>
-            <a href="reaktioyhtälön tasapainotus.html">Palamisreaktion tasapainotus (Hiilivedyt)</a>
-            <a href="reaktio.html">Palamisreaktion tasapainotus (Hiilivedyt ja alkoholit)</a>
-            
-        </div>
-
-    </div>
-
+<header><h1>🎮 Oppimispelit</h1><p>Harjoittele matematiikkaa, fysiikkaa ja kemiaa pelaamalla!</p></header>
+<main class="wrap"><div class="search"><label for="search">🔎 Etsi oppimispeli</label><input id="search" type="search" placeholder="Hae esimerkiksi potenssi, sähkö tai hiilivedyt…" autocomplete="off"><p id="resultCount" aria-live="polite" style="margin:9px 0 0;color:#62738b;font-size:.85rem"></p></div><div id="grades" class="grades"></div></main>
+<footer>Oppiminen voi olla myös pelaamista ✨</footer>
+<script>
+const data={
+'7. luokka':{
+'Matematiikka':[
+['matematiikan_koeharjoittelupeli (6).html','Harjoittelua kokeeseen'],
+['avaruusalus_plus_miinus_peli.html','Avaruusaluspeli (summa ja erotus)'],
+['kokonaislukupeli (1).html','Kokonaislukujen laskusäännöt ja merkkisäännöt (summa ja erotus)'],
+['Summa ja erotus luonnollisilla luvuilla.html','Yhteen- ja vähennyslasku luonnollisilla luvuilla'],
+['desimaalilukupeli_positiiviset_vastaukset.html','Yhteen- ja vähennyslasku desimaaliluvuilla'],
+['kertolaskupeli_pisteella.html','Kertolaskut luonnollisilla luvuilla'],
+['jakolaskupeli_lyhyempi_murtoviiva.html','Jakolaskut luonnollisilla luvuilla'],
+['yhteen ja vähennyslasku.html','Yhteen- ja vähennyslasku kokonaisluvuilla'],
+['yhteen ja vähennyslasku keskitaso.html','Yhteen- ja vähennyslasku (keskitaso)'],
+['kokonaislukuseikkailu.html','Kokonaislukujen kertolaskuja ampumispeli'],
+['kertotaulupeli.html','Kertotaulut'],
+['kertolaskupeli.html','Kertolaskupeli (myös negatiiviset luvut)'],
+['kertolaskupeli keskitaso.html','Kertolaskupeli (keskitaso)'],
+['Laskujärjestys.html','Laskujärjestys'],
+['vertailumerkit.html','Vertailumerkit'],
+['Pallopeli kertolaskut.html','Pallopeli (kertolaskut)'],
+['avaruusalus_kertolaskupeli (3).html','Avaruusaluspeli (kertolaskut)'],
+['kertolasku_matopeli_aloitusnapilla.html','Kertolaskumatopeli (päivitetty)'],
+['potenssipeli.html','Potenssipeli'],
+['potenssipeli (1).html','Potenssipeli (myös negatiiviset kantaluvut)'],
+['potenssimatopeli_korjattu.html','Matopeli (potenssi)'],
+['avaruusraketti_potenssipeli.html','Avaruusrakettipeli (potenssi)'],
+['Prosenttilukujen muuntaminen.html','Prosenttilukujen muuntaminen peli'],
+['Kirjainlaskennan perusteet.html','Kirjainlaskenta (perusteet)'],
+['Kirjainlaskenta keskitaso.html','Kirjainlaskenta (keskitaso)'],
+['Lausekkeen arvo.html','Lausekkeen arvo'],
+['Geometriset kappaleet.html','Tunnista geometrinen kappale (monivalinta)'],
+['Geometrian laskupeli.html','Määritä kulma, laske pinta-ala tai piiri (monivalinta)']
+],
+'Fysiikka':[['avaruuspeli.html','Avaruuspeli'],['Aaltoliike.html','Aaltoliike pomppupeli']],
+'Kemia':[['kemialliset merkit 1.html','Kemialliset merkit 1'],['kemialliset merkit 2.html','Kemialliset merkit 2'],['avaruusalus_alkuaineiden_kemialliset_merkit (2).html','Avaruusaluspeli kemialliset merkit 2'],['kemian_varoitusmerkkipeli.html','Kemian varoitusmerkit (monivalinta)'],['pallomalli.html','Pallomallin harjoittelua (monivalinta)'],['kemian_tyovalineet_peli_keittopullo.html','Työvälineiden nimet (monivalinta)'],['kemian_kasitteet_monivalintapeli.html','Kemian käsitteitä osa 1 (monivalinta)'],['kemiallisten_kaavojen_peli.html','Kemialliset kaavat (monivalinta)']]
+},
+'8. luokka':{
+'Matematiikka':[['prosenttilaskupeli(1).html','Prosenttipeli'],['potenssimestari_kaikki_pelit.html','Potenssin laskusäännöt'],['todennakoisyyspeli.html','Todennäköisyys (pallot laatikossa)'],['tilastoseikkailu.html','Kertausta: tilastot ja todennäköisyys']],
+'Fysiikka':[['Hankaussähkö.html','Kysymyksiä hankaussähköstä'],['Piirtomerkit sähköoppi.html','Harjoittele sähköopin piirtomerkkejä'],['Kytkennät.html','Harjoittele sähkökytkentöjä']],
+'Kemia':[['kemian_kasitteet_peli.html','Kemian käsitteitä (monivalinta)'],['jaksollinen-peli.html','Jaksollinen järjestelmä'],['elektronirakennepeli (1).html','Elektronirakennepeli'],['isotooppipeli.html','Isotoopit'],['ioniyhdisteen muodostuminen.html','Ioniyhdisteen muodostuminen'],['ioniyhdisteiden nimeäminen.html','Ioniyhdisteen nimeäminen'],['molekyyliyhdisteiden nimeäminen.html','Molekyyliyhdisteiden nimeäminen'],['kemia8_kertauspeli.html','Kemian käsitteitä (monivalinta)'],['kemian_ph_dash_v2 (1).html','Hapot, emäkset ja neutralointi (pH-Dash peli)']]
+},
+'9. luokka':{
+'Matematiikka':[],
+'Fysiikka':[['Kysymyksiä nopeudesta.html','Kysymyksiä nopeudesta ja kiihtyvyydestä'],['liikepeli.html','Tunnista liikkeen kuvaaja (monivalinta)'],['Kuvaajapeli.html','Harjoittele liikkeen kuvaajan tulkintaa'],['Nopeuden kuvaaja.html','Harjoittele nopeuden kuvaajan tulkintaa'],['Kirja.html','Sähköinen kirja']],
+'Kemia':[['Orgaaninen kemia.html','Kysymyksiä hiilivedyistä'],['Alkoholit.html','Kysymyksiä alkoholeista'],['Karboksyylihapot.html','Kysymyksiä karboksyylihapoista'],['hiilivety.html','Tunnista hiilivety'],['hiilivedyt ja alkoholit.html','Tunnista hiilivety tai alkoholi'],['hiilivedyt ja alkoholit ja karboksyylihapot.html','Tunnista hiilivety tai alkoholi tai karboksyylihappo'],['orgaanisen kemian käsitteitä.html','Orgaanisen kemian käsitteet'],['reaktioyhtälön tasapainotus.html','Palamisreaktion tasapainotus (hiilivedyt)'],['reaktio.html','Palamisreaktion tasapainotus (hiilivedyt ja alkoholit)']]
+}};
+const icons={Matematiikka:'📐',Fysiikka:'⚡',Kemia:'🧪'};
+const grades=document.getElementById('grades');
+const search=document.getElementById('search');
+function makeButton(text,expanded=false){const b=document.createElement('button');b.type='button';b.setAttribute('aria-expanded',String(expanded));b.innerHTML=text+' <span class="chevron" aria-hidden="true">⌄</span>';return b;}
+function build(){for(const [grade,subjects] of Object.entries(data)){const card=document.createElement('section');card.className='grade';const gb=makeButton(grade);const area=document.createElement('div');area.className='subjects hidden';gb.addEventListener('click',()=>{const open=gb.getAttribute('aria-expanded')!=='true';gb.setAttribute('aria-expanded',String(open));area.classList.toggle('hidden',!open)});card.append(gb,area);for(const [subject,games] of Object.entries(subjects)){const s=document.createElement('section');s.className='subject';const sb=makeButton('<span class="left">'+icons[subject]+' '+subject+' <span class="count">'+games.length+' peliä</span></span>');const links=document.createElement('div');links.className='games hidden';sb.addEventListener('click',()=>{const open=sb.getAttribute('aria-expanded')!=='true';sb.setAttribute('aria-expanded',String(open));links.classList.toggle('hidden',!open)});for(const [file,name] of games){const a=document.createElement('a');a.href=file;a.textContent='🎮 '+name;links.append(a)}if(!games.length){const empty=document.createElement('div');empty.className='empty';empty.textContent='Tähän ei ole vielä lisätty pelejä.';links.append(empty)}s.append(sb,links);area.append(s)}grades.append(card)}}
+build();
+const allCount=Object.values(data).flatMap(s=>Object.values(s)).reduce((n,g)=>n+g.length,0);
+function filter(){const q=search.value.trim().toLocaleLowerCase('fi');let hits=0;for(const card of grades.children){const gb=card.firstElementChild,area=card.lastElementChild;let gradeHits=0;for(const s of area.children){const sb=s.firstElementChild,links=s.lastElementChild;let subjectHits=0;for(const a of links.querySelectorAll('a')){const match=!q||[a.textContent,a.getAttribute('href'),gb.textContent,sb.textContent].some(t=>t.toLocaleLowerCase('fi').includes(q));a.classList.toggle('hidden',!match);if(match)subjectHits++}s.classList.toggle('hidden',!!q&&!subjectHits);gradeHits+=subjectHits;if(q&&subjectHits){sb.setAttribute('aria-expanded','true');links.classList.remove('hidden')}}card.classList.toggle('hidden',!!q&&!gradeHits);hits+=gradeHits;if(q&&gradeHits){gb.setAttribute('aria-expanded','true');area.classList.remove('hidden')}}document.getElementById('resultCount').textContent=q?`${hits} hakutulosta`:`${allCount} peliä valittavana`}
+search.addEventListener('input',filter);filter();
+</script>
 </body>
 </html>
